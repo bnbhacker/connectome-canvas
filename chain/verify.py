@@ -44,5 +44,35 @@ def verify(address: str) -> dict:
     return {"status": r.status_code, "body": r.text[:500], "compiler": data["compiler_version"]}
 
 
+SOURCIFY = "https://sourcify.dev/server"
+
+
+def sourcify(address: str, creation_tx: str, chain_id: int = 4663, poll_s: float = 4.0, tries: int = 40) -> dict:
+    """Verify through Sourcify (which supports Robinhood Chain); Blockscout reads Sourcify matches.
+    Blockscout's own API sits behind a Cloudflare challenge for scripts, Sourcify does not."""
+    import time
+    body = {"stdJsonInput": standard_input(), "compilerVersion": compiler_version().removeprefix("v"),
+            "contractIdentifier": "ConnectomeCanvas.sol:ConnectomeCanvas", "creationTransactionHash": creation_tx}
+    r = requests.post(f"{SOURCIFY}/v2/verify/{chain_id}/{address}", json=body, timeout=180)
+    try:
+        vid = r.json().get("verificationId")
+    except ValueError:
+        vid = None
+    if not vid:
+        return {"status": r.status_code, "body": r.text[:500]}
+    for _ in range(tries):
+        time.sleep(poll_s)
+        s = requests.get(f"{SOURCIFY}/v2/verify/{vid}", timeout=60).json()
+        if s.get("isJobCompleted"):
+            c = s.get("contract") or {}
+            return {"match": c.get("match"), "creationMatch": c.get("creationMatch"),
+                    "runtimeMatch": c.get("runtimeMatch"), "error": s.get("error"), "verificationId": vid}
+    return {"verificationId": vid, "status": "still running"}
+
+
 if __name__ == "__main__":
-    print(json.dumps(verify(sys.argv[1]), indent=1))
+    # python -m chain.verify 0xContract [0xCreationTx]   (with a creation tx: Sourcify, else Blockscout)
+    if len(sys.argv) > 2:
+        print(json.dumps(sourcify(sys.argv[1], sys.argv[2]), indent=1))
+    else:
+        print(json.dumps(verify(sys.argv[1]), indent=1))

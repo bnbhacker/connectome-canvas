@@ -202,7 +202,8 @@ def mint_piece(piece_id: int, dry_run: bool = True, network: str | None = None) 
     if receipt.status != 1:
         raise SystemExit(f"mint reverted: {tx_hash.hex()}")
     token_id = None
-    for log in contract.events.Transfer().process_receipt(receipt):
+    from web3.logs import DISCARD      # the receipt also carries Painted; ignore what isn't a Transfer
+    for log in contract.events.Transfer().process_receipt(receipt, errors=DISCARD):
         token_id = int(log["args"]["tokenId"])
     if token_id is not None and token_id != next_id and mode == "site":
         # someone else minted in between (the keeper by hand): move the metadata to the real id
