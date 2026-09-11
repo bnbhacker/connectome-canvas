@@ -68,7 +68,7 @@
       <div class="meta">
         <div class="name">${CC.esc(p.name)}</div>
         <div class="sw">${(p.swatches || []).slice(0, 10).map(c => `<i style="background:${c}"></i>`).join("")}</div>
-        <div class="stats"><span>${(p.brain_ms / 1000).toFixed(1)} s brain</span><span>${p.strokes} strokes</span><span>${CC.fmt(p.spikes)} spikes</span>${p.synapses_changed != null ? `<span>${CC.fmt(p.synapses_changed)} synapses changed</span>` : ""}<span>seed ${p.seed}</span></div>
+        <div class="stats"><span>${(p.brain_ms / 1000).toFixed(1)} s brain</span><span>${p.strokes} strokes</span><span>${CC.fmt(p.spikes)} spikes</span>${p.synapses_changed != null ? `<span>${CC.fmt(p.synapses_changed)} synapses changed</span>` : ""}${p.generation != null ? `<span>gen ${p.generation}${p.mutation_kept ? " ✓" : ""}</span>` : ""}<span>seed ${p.seed}</span></div>
         ${p.png_sha256 ? `<div class="stats"><span title="${p.png_sha256}">sha ${p.png_sha256.slice(0, 12)}…</span></div>` : ""}
         ${status}
         <div class="links">

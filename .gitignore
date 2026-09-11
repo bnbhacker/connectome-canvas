@@ -1,7 +1,8 @@
 # the connectome itself: 540 MB of CC-BY feather files, fetched with `python run.py fetch`
 data/
-# the built graph (38 MB) — rebuild it, don't commit it
+# the built graph (38 MB), per-generation gains snapshots and the mushroom-body state — rebuilt or regrown, not committed
 build/
+# the current evolved gains are committed now and then on purpose (assets/gains.npz)
 # finished pieces live in gallery/ (full PNG + provenance) and site/recordings/ (score + 512 px copy);
 # both are committed on purpose — they are the work
 # never

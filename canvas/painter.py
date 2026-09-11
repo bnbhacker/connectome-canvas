@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
+from brain.evolve import Evolution
 from brain.motor import Motor, Rates, Command
 from brain.mushroom import MushroomBody
 from brain.palette import Palette
@@ -102,14 +103,16 @@ class Painter:
         self.recordings.mkdir(parents=True, exist_ok=True)
         self.graph_path = graph_path
         self.graph_sha = _sha256(graph_path) if graph_path.exists() else ""
-        self.gains_loaded = 0
-        if gains_path and gains_path.exists():
-            self.gains_loaded = brain.load_gains(gains_path)
+        # evolution owns the per-type gains: it loads the current parent (assets/gains.npz) or starts at 1.0
+        self.evolution = Evolution(brain, state_path=gains_path or (ROOT / "assets" / "gains.npz"))
+        self.gains_loaded = int(self.evolution.generation > 0)
 
         self.retina = Retina(brain)
         self.motor = Motor(brain)
         self.palette = Palette(brain)
         self.mushroom = MushroomBody(brain)
+        self.mushroom_state = ROOT / "build" / "mushroom.npz"
+        self._load_mushroom()
         self.subsample = self._pick_subsample()
         self.sub_class = self._classes(self.subsample)
         self.sub_xyz = self._positions(self.subsample)
@@ -164,6 +167,28 @@ class Painter:
             xyz = np.nan_to_num(b.soma[idx], nan=500.0)
         return [[int(v) for v in p] for p in xyz]
 
+    def _load_mushroom(self) -> None:
+        """What the mushroom body learned carries over from run to run."""
+        try:
+            if self.mushroom_state.exists():
+                z = np.load(self.mushroom_state, allow_pickle=False)
+                eff = z["eff"].astype(np.float32)
+                if eff.size == self.mushroom.eff.size:
+                    self.mushroom.eff[:] = eff
+                    self.mushroom.rewards = int(z["rewards"]) if "rewards" in z.files else 0
+                    self.mushroom.punishments = int(z["punishments"]) if "punishments" in z.files else 0
+                    self.brain.wdata[self.mushroom.entry] = self.mushroom.base * self.mushroom.eff
+        except Exception:
+            pass
+
+    def _save_mushroom(self) -> None:
+        try:
+            self.mushroom_state.parent.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(self.mushroom_state, eff=self.mushroom.eff, rewards=np.array(self.mushroom.rewards),
+                                punishments=np.array(self.mushroom.punishments))
+        except Exception:
+            pass
+
     def info(self) -> dict:
         b = self.brain
         return {
@@ -186,6 +211,7 @@ class Painter:
             "mushroom": {"kc": self.mushroom.n_kc, "mbon": self.mushroom.n_mbon,
                          "synapses": int(self.mushroom.entry.size),
                          "reward_side": self.mushroom.n_reward_syn, "punish_side": self.mushroom.n_punish_syn},
+            "evolution": self.evolution.summary(),
             "canvas": {"size": self.size, "tick_ms": self.tick_ms, "budget_ticks": self.budget_ticks},
         }
 
@@ -230,13 +256,15 @@ class Painter:
             self.lum = np.zeros((self.size, self.size), dtype=np.float32)
             self.painted = np.zeros((self.size, self.size), dtype=bool)
             s = Session(id=sid, seed=seed, started=time.time())
+            self._proposal = self.evolution.propose()
             margin = self.size * 0.2
             s.x = float(margin + b.rng.random() * (self.size - 2 * margin))
             s.y = float(margin + b.rng.random() * (self.size - 2 * margin))
             s.heading = float(b.rng.random() * 2 * math.pi)
             self.session = s
             self.synapses_changed = 0
-            self.event("session", f"sitting #{sid} began · seed {seed} · brush at ({int(s.x)}, {int(s.y)})")
+            self.event("session", f"sitting #{sid} began · seed {seed} · generation {self._proposal['generation']} "
+                                  f"({self._proposal['mutated_types']} cell types mutated) · brush at ({int(s.x)}, {int(s.y)})")
             return s
 
     def tick(self) -> bool:
@@ -383,6 +411,11 @@ class Painter:
             png_sha = _sha256(png_path)
             counts_total = self.last_counts if self.last_counts is not None else np.zeros(b.n, dtype=np.int32)
             top = self._top_types(counts_total)
+            coverage = float(self.painted.sum()) / float(self.size * self.size) if self.painted is not None else 0.0
+            evo = self.evolution.evaluate(coverage)
+            self._save_mushroom()
+            self.event("evolve", f"generation {evo['generation']}: covered {coverage * 100:.2f} % of the canvas · "
+                                 f"{'kept' if evo['accepted'] else 'discarded'} the mutation (best {evo['best_fitness'] * 100:.2f} %)")
             piece = {
                 "id": s.id,
                 "name": f"Canvas Fly #{s.id}",
@@ -403,6 +436,10 @@ class Painter:
                 "synapses_changed": self.synapses_changed,
                 "rewards": self.mushroom.rewards,
                 "punishments": self.mushroom.punishments,
+                "coverage": round(coverage, 6),
+                "generation": evo["generation"],
+                "gains_sha256": evo["gains_sha256"],
+                "mutation_kept": evo["accepted"],
                 "top_types": top,
                 "swatches": s.swatches[-12:],
                 "png": f"{stem}.png",
@@ -450,7 +487,8 @@ class Painter:
                           "strokes": p["strokes"], "spikes": p["spikes"],
                           "brain_ms": p["brain_ms"], "surrogate": p["surrogate"], "swatches": p["swatches"],
                           "png_sha256": p.get("png_sha256"), "synapses_changed": p.get("synapses_changed"),
-                          "chain": p.get("chain")}
+                          "generation": p.get("generation"), "mutation_kept": p.get("mutation_kept"),
+                          "coverage": p.get("coverage"), "chain": p.get("chain")}
                          for p in index]
             (self.recordings / "index.json").write_text(json.dumps(rec_index, indent=1), encoding="utf-8")
             self.finished.append(piece)
@@ -523,6 +561,7 @@ class Painter:
             "mushroom": {"changed": self.synapses_changed, "mean_gain": round(self.mushroom.mean_gain(), 4),
                          "rewards": self.mushroom.rewards, "punishments": self.mushroom.punishments,
                          "synapses": int(self.mushroom.entry.size)},
+            "evolution": self.evolution.summary(),
             "fired": [int(i) for i in self.last_fired_sub],
             "events": list(self.events)[:40],
             "gallery_count": len(self._read_index()),

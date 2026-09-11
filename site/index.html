@@ -101,7 +101,8 @@
           </div>
           <div class="mix" style="font-size:11px;color:var(--paper-dim);margin-top:8px">
             mean gain <b id="mb-gain" style="color:var(--paper)">—</b> · rewards <b id="mb-rew" style="color:var(--paper)">—</b> · punishments <b id="mb-pun" style="color:var(--paper)">—</b><br>
-            KC→MBON synapses under dopamine. Depression only — that is the rule a fly actually uses.
+            KC→MBON synapses under dopamine. Depression only — that is the rule a fly actually uses.<br>
+            <span style="color:var(--ochre)">evolution</span> generation <b id="ev-gen" style="color:var(--paper)">—</b> · <b id="ev-kept" style="color:var(--paper)">—</b> mutations kept · <b id="ev-types" style="color:var(--paper)">—</b> cell types changed · best coverage <b id="ev-best" style="color:var(--paper)">—</b>
           </div>
         </div>
       </div>
@@ -150,7 +151,7 @@
     <div class="step amber"><span class="num">05</span><div class="what"><b>Reward loop closed</b><span>KC→MBON synapses under dopamine, novelty as the reward, the edge as the punishment</span></div><span class="st done">done</span></div>
     <div class="step" style="margin-top:14px"><span class="num">06</span><div class="what"><b>Contract on Robinhood Chain</b><span><code>ConnectomeCanvas.sol</code>: owner-only mint, PNG hash and seed stored per token, 5 % royalty. Gas on Robinhood Chain is a fraction of a cent</span></div><span class="st building">deploying</span></div>
     <div class="step"><span class="num">07</span><div class="what"><b>First sitting minted and listed</b><span>the painter mints, the token lands in the keeper's wallet, and the keeper lists it by hand on OpenSea — a signature, no fee</span></div><span class="st next">next</span></div>
-    <div class="step"><span class="num">08</span><div class="what"><b>Trained gains</b><span>evolution strategy over per-type gains toward paintings that cover more canvas without repeating themselves</span></div><span class="st next">next</span></div>
+    <div class="step"><span class="num">08</span><div class="what"><b>Evolution between sittings</b><span>a (1+1) evolution strategy over per-cell-type gains: a few per cent of types mutate before each sitting, the mutation is kept when the fly covers at least as much canvas as before. The mushroom body's learning carries over too. The pictures drift.</span></div><span class="st done">done</span></div>
   </div>
 
   <p class="kicker" style="margin-top:72px">What is not real, stated plainly</p>
@@ -160,7 +161,7 @@
     <div class="row"><b>Colour is not a fly decision.</b><span>A fly has no notion of paint. Colour is read off which populations carried the spikes, with anchor hues chosen by a person. The mapping is fixed and public.</span></div>
     <div class="row"><b>The reward is invented.</b><span>The circuit, the plasticity site and the direction of the rule are real and measured. What a fly is rewarded by is sugar, not by covering fresh canvas.</span></div>
     <div class="row"><b>Background noise is a modelling choice.</b><span>0.1 % of neurons receive a small random kick each step so the network never falls silent. It is seeded, so it replays identically.</span></div>
-    <div class="row"><b>Gains are untrained today.</b><span>Every cell-type gain is 1.0. Training them is step 08. The pictures you see are the anatomy as released, nothing more.</span></div>
+    <div class="row"><b>Evolution has a fitness a person chose.</b><span>Mutations to per-type gains survive when the fly covers more canvas. That is the only pressure, and it is ours, not the fly's. The wiring itself never changes.</span></div>
     <div class="row"><b>It has no goals.</b><span>A fly brain has no language and no plan. It cannot see the picture as a picture. Nobody is steering — that is the point, not a claim that it decided anything.</span></div>
   </div>
 
@@ -318,6 +319,11 @@
     $("b-mb").style.width = (mb.synapses ? Math.min(100, mb.changed / mb.synapses * 100 * 4) : 0) + "%";
     $("h-mb").textContent = CC.fmt(mb.changed); $("mb-gain").textContent = mb.mean_gain.toFixed(3);
     $("mb-rew").textContent = mb.rewards; $("mb-pun").textContent = mb.punishments;
+    if (s.evolution) {
+      const ev = s.evolution;
+      $("ev-gen").textContent = ev.generation; $("ev-kept").textContent = ev.accepted; $("ev-types").textContent = CC.fmt(ev.types_changed);
+      $("ev-best").textContent = ev.best_fitness != null ? (ev.best_fitness * 100).toFixed(2) + "%" : "—";
+    }
 
     if (scatter) scatter.fire(s.fired);
     $("log").innerHTML = s.events.slice(0, 40).map(e => `<li><span class="t">${CC.hhmm(e.t)}</span><span class="k-${e.kind}">${CC.esc(e.text)}</span></li>`).join("") || "<li><span class='t'>—</span><span>quiet</span></li>";

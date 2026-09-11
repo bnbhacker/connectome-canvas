@@ -5,10 +5,12 @@ built and signed here, posted to OpenSea's orderbook.
     python run.py list 12 --price 0.005            # posts the listing (needs OPENSEA_API_KEY)
     python run.py list 12 --price 0.005 --dry-run  # builds and signs, prints the order, posts nothing
 
-opensea-js does not know Robinhood Chain, so the order is assembled by hand:
+opensea-js does not know Robinhood Chain, so the order is assembled by hand the way
+OpenSea's own orders on that chain look (decoded from live fills):
     offer          the ERC-721 (our contract, tokenId)
-    consideration  ETH to the painter, minus OpenSea's required fee(s) to their recipient
-    zone / hash    none; orderType FULL_OPEN; conduit = OpenSea's, which the painter approves once
+    consideration  ETH to the painter, minus OpenSea's 1 % and the collection's creator fee
+    zone           OpenSea's signed zone, orderType FULL_RESTRICTED (buyers fulfil through OpenSea)
+    conduit        OpenSea's Robinhood Chain conduit, which the painter approves once
 The first listing sends one setApprovalForAll transaction (cents on Robinhood Chain);
 every listing after that is a signature only.
 """
@@ -27,9 +29,14 @@ from .mint import NETWORKS, load_piece, save_piece
 
 ROOT = Path(__file__).resolve().parent.parent
 
-SEAPORT = Web3.to_checksum_address("0x0000000000000068F116a894984e2DB1123eB395")          # Seaport 1.6
-CONDUIT_KEY = "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"        # OpenSea conduit
-CONDUIT = Web3.to_checksum_address("0x1E0049783F008A0085193E00003D00cd54003c71")
+# Read off live OpenSea fills on Robinhood Chain (11 Sep 2026): OpenSea's own orders there use
+# this conduit, this signed zone, orderType 2 (FULL_RESTRICTED), a 1 % fee to OpenSea and the
+# collection's creator fee. Every value can be overridden from the environment if OpenSea moves.
+SEAPORT = Web3.to_checksum_address(os.environ.get("CANVAS_SEAPORT", "0x0000000000000068F116a894984e2DB1123eB395"))   # Seaport 1.6
+CONDUIT_KEY = os.environ.get("CANVAS_CONDUIT_KEY", "0x61159fefdfada89302ed55f8b9e89e2d67d8258712b3a3f89aa88525877f1d5e")
+CONDUIT = Web3.to_checksum_address(os.environ.get("CANVAS_CONDUIT", "0x963F00d3ff000064fFCbA824b800c0000000C300"))
+ZONE = Web3.to_checksum_address(os.environ.get("CANVAS_ZONE", "0x000056F7000000EcE9003ca63978907a00FFD100"))          # OpenSea signed zone
+ORDER_TYPE = int(os.environ.get("CANVAS_ORDER_TYPE", "2"))                                                             # FULL_RESTRICTED
 OPENSEA_FEE_RECIPIENT = Web3.to_checksum_address("0x0000a26b00c1F0DF003000390027140000fAa719")
 API = "https://api.opensea.io/api/v2"
 
@@ -85,14 +92,19 @@ def collection_slug(chain: str, contract: str) -> str | None:
 
 
 def required_fees(slug: str | None) -> list[tuple[float, str]]:
-    """[(percent, recipient)] OpenSea insists on. Falls back to the fee OpenSea charges on this chain."""
+    """[(percent, recipient)] the order must pay out. From OpenSea's collection record when it has one;
+    otherwise OpenSea's 1 % plus the contract's 5 % royalty to the keeper."""
     if slug:
         r = requests.get(f"{API}/collections/{slug}", headers=_headers(), timeout=30)
         if r.status_code == 200:
-            fees = [(float(f["fee"]), Web3.to_checksum_address(f["recipient"])) for f in r.json().get("fees", []) if f.get("required")]
+            fees = [(float(f["fee"]), Web3.to_checksum_address(f["recipient"])) for f in r.json().get("fees", []) if f.get("fee")]
             if fees:
                 return fees
-    return [(float(os.environ.get("CANVAS_OPENSEA_FEE_PCT", "1.0")), OPENSEA_FEE_RECIPIENT)]
+    fees = [(float(os.environ.get("CANVAS_OPENSEA_FEE_PCT", "1.0")), OPENSEA_FEE_RECIPIENT)]
+    keeper = os.environ.get("CANVAS_OWNER")
+    if keeper:
+        fees.append((float(os.environ.get("CANVAS_ROYALTY_PCT", "5.0")), Web3.to_checksum_address(keeper)))
+    return fees
 
 
 def ensure_approval(w3: Web3, acct, contract: str, net: dict) -> str | None:
@@ -128,11 +140,11 @@ def build_order(w3: Web3, acct, contract: str, token_id: int, price_wei: int, da
                              "startAmount": price_wei - fee_total, "endAmount": price_wei - fee_total, "recipient": acct.address})
     return {
         "offerer": acct.address,
-        "zone": "0x0000000000000000000000000000000000000000",
+        "zone": ZONE,
         "offer": [{"itemType": 2, "token": Web3.to_checksum_address(contract), "identifierOrCriteria": int(token_id),
                    "startAmount": 1, "endAmount": 1}],
         "consideration": consideration,
-        "orderType": 0,
+        "orderType": ORDER_TYPE,
         "startTime": now - 120,
         "endTime": now + days * 86400,
         "zoneHash": "0x" + "00" * 32,

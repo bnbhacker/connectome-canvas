@@ -97,7 +97,33 @@ The studio pages read `/api/*` from the server. Without a server the demonstrati
 gallery fall back to `site/recordings/`, which is static — the whole site deploys to Vercel or
 GitHub Pages as files.
 
-### Chain — the simple way (Robinhood Chain, listed by hand)
+### Chain — automatic (Robinhood Chain, 5 000 tokens, listed by the studio)
+
+The studio does the whole loop itself once `.env` has a contract, a price and an OpenSea key:
+
+```
+sitting finishes ─► mint(to=painter, sha256, seed)   ConnectomeCanvas on Robinhood Chain, cap 5 000
+                 ─► site/nft/<id>.json + png         metadata at connectomecanvas.com/nft/<id> (= baseURI + id)
+                 ─► run.py publish                   Vercel: score, thumbnail, gallery, metadata
+                 ─► Seaport listing                  built + signed by the painter, posted to OpenSea's orderbook
+```
+
+```bash
+python run.py wallet new                 # painter keystore; put the passphrase in a file and point CANVAS_KEYSTORE_PASSWORD_FILE at it
+# fund the painter with ~0.02 ETH on Robinhood Chain (deploy ≈ 0.0004, each mint ≈ 0.00002)
+CANVAS_OWNER=0xKeeper python run.py deploy --live     # ConnectomeCanvas(keeper, painter, keeper, 5000, https://connectomecanvas.com/nft/)
+# .env: CANVAS_CONTRACT=0x…  CANVAS_MINT=1  CANVAS_LIST_ETH=0.005  OPENSEA_API_KEY=…
+powershell -File tools/studio.ps1        # or Start-Process … -WindowStyle Hidden: paints, mints, publishes, lists, restarts itself
+python run.py sweep --live               # move sale proceeds from the painter to the keeper
+```
+
+Listings are Seaport 1.6 orders assembled in `chain/opensea.py` exactly the way OpenSea's own
+Robinhood Chain orders look (their signed zone, their conduit, 1 % to OpenSea plus the creator fee),
+because opensea-js does not know the chain. A listing OpenSea is not ready for yet (token not indexed)
+is retried on the following sittings. When the contract reports sold out, or 5 000 sittings exist,
+the fly puts the brush down.
+
+### Chain — by hand (the same contract, you list on opensea.io)
 
 OpenSea indexes Robinhood Chain (chain id 4663, slug `robinhood`), and gas there costs a fraction
 of a cent, so the cheapest honest pipeline is: the fly paints, the painter wallet mints the token
