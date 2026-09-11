@@ -36,6 +36,7 @@
 
       <div class="stage idle" id="stage">
         <img id="frame" alt="the live canvas" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">
+        <canvas id="replaycv" width="1024" height="1024" hidden></canvas>
         <div class="cursor" id="cursor"></div>
         <div class="tag">live canvas · sitting <span id="t-sitting">—</span></div>
         <div class="tag br" id="t-colour">—</div>
@@ -140,8 +141,8 @@
     <div class="step"><span class="num">03</span><div class="what"><b>Hands wired</b><span>DNa02, DNa01, MDN and DNp09 driving a brush over a 1024 px canvas</span></div><span class="st done">done</span></div>
     <div class="step"><span class="num">04</span><div class="what"><b>Score recorded</b><span>every window of every sitting written down, so a painting replays in any browser without the brain running</span></div><span class="st done">done</span></div>
     <div class="step amber"><span class="num">05</span><div class="what"><b>Reward loop closed</b><span>KC→MBON synapses under dopamine, novelty as the reward, the edge as the punishment</span></div><span class="st done">done</span></div>
-    <div class="step" style="margin-top:14px"><span class="num">06</span><div class="what"><b>Contract on Base</b><span><code>ConnectomeCanvas.sol</code>: owner-only mint, PNG hash and seed stored per token, 5 % royalty</span></div><span class="st building">deploying</span></div>
-    <div class="step"><span class="num">07</span><div class="what"><b>First sitting minted and listed</b><span>IPFS pin, mint, Seaport listing — one signed transaction and one signed order from the painter's keystore</span></div><span class="st next">next</span></div>
+    <div class="step" style="margin-top:14px"><span class="num">06</span><div class="what"><b>Contract on Robinhood Chain</b><span><code>ConnectomeCanvas.sol</code>: owner-only mint, PNG hash and seed stored per token, 5 % royalty. Gas on Robinhood Chain is a fraction of a cent</span></div><span class="st building">deploying</span></div>
+    <div class="step"><span class="num">07</span><div class="what"><b>First sitting minted and listed</b><span>the painter mints, the token lands in the keeper's wallet, and the keeper lists it by hand on OpenSea — a signature, no fee</span></div><span class="st next">next</span></div>
     <div class="step"><span class="num">08</span><div class="what"><b>Trained gains</b><span>evolution strategy over per-type gains toward paintings that cover more canvas without repeating themselves</span></div><span class="st next">next</span></div>
   </div>
 
@@ -158,11 +159,11 @@
 
   <p class="kicker" style="margin-top:72px">On chain</p>
   <h2 class="sec" style="margin-top:0">Connectome Canvas · CANVAS</h2>
-  <p class="sub">One ERC-721 per sitting, minted from the painter's own wallet. Next to every token the contract stores the SHA-256 of the PNG and the sitting's seed, so provenance is checked against the block, not against this page.</p>
+  <p class="sub">One ERC-721 per sitting, minted by the painter's own wallet on Robinhood Chain. Next to every token the contract stores the SHA-256 of the PNG and the sitting's seed, so provenance is checked against the block, not against this page. Listings are made by hand on OpenSea, which indexes Robinhood Chain.</p>
   <div class="panel">
     <div class="contract">
       <span class="k">contract</span><span class="v addr"><span id="c-addr">not deployed yet</span><button class="copy" id="c-copy" hidden>copy</button></span>
-      <span class="k">chain</span><span class="v" id="c-chain">Base · id 8453</span>
+      <span class="k">chain</span><span class="v" id="c-chain">Robinhood Chain · id 4663</span>
       <span class="k">standard</span><span class="v">ERC-721 + ERC-2981 (5 % royalty) · owner-only <code>mint(to, uri, pngSha256, seed)</code></span>
       <span class="k">collection</span><span class="v" id="c-os">OpenSea link appears after the first mint</span>
       <span class="k">minting</span><span class="v" id="c-mint">—</span>
@@ -172,11 +173,12 @@
 
 <footer>
   Connectome data © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, released CC-BY 4.0. Simulation after Shiu et al. 2024.
-  Not affiliated with any of them, nor with OpenSea or Base. Connectome Canvas is an art experiment, not an investment.
+  Not affiliated with any of them, nor with OpenSea or Robinhood. Connectome Canvas is an art experiment, not an investment.
   · <a href="https://github.com/bnbhacker/connectome-canvas">source</a> · <a href="brain.html">the brain</a>
 </footer>
 
 <script src="common.js"></script>
+<script src="replay.js"></script>
 <script>
 (async function () {
   const $ = id => document.getElementById(id);
@@ -196,22 +198,63 @@
     $("s-edges").textContent = CC.fmt(info.edges);
     $("v-n").textContent = CC.fmt(info.neurons);
     $("v-budget").textContent = (info.canvas.budget_ticks * info.canvas.tick_ms / 1000).toFixed(1);
+    const OS = { robinhood: ["https://opensea.io/assets/robinhood/", "Robinhood Chain · id 4663"],
+                 base: ["https://opensea.io/assets/base/", "Base · id 8453"],
+                 "base-sepolia": ["https://testnets.opensea.io/assets/base_sepolia/", "Base Sepolia · id 84532"] };
     if (info.contract) {
       $("c-addr").textContent = info.contract; $("c-copy").hidden = false;
       $("c-copy").onclick = () => CC.copy(info.contract, $("c-copy"));
-      const os = info.network === "base" ? "https://opensea.io/assets/base/" : "https://testnets.opensea.io/assets/base_sepolia/";
+      const [os, chainName] = OS[info.network] || OS.robinhood;
       $("c-os").innerHTML = `<a href="${os}${info.contract}" target="_blank" rel="noopener">opensea ↗</a>`;
-      $("c-chain").textContent = info.network === "base" ? "Base · id 8453" : "Base Sepolia · id 84532";
+      $("c-chain").textContent = chainName;
     }
-    $("c-mint").textContent = info.mint_enabled ? "on — every finished sitting is pinned, minted and listed" : "off — sittings are recorded and shown; minting is armed by the operator";
+    $("c-mint").textContent = info.mint_enabled ? "on — every finished sitting is minted as soon as it dries" : "by hand — the keeper mints finished sittings with run.py mint and lists them on OpenSea";
     const neurons = await getJSON("api/neurons");
     scatter = CC.Scatter($("scatter"), neurons);
     $("scatter-note").textContent = `${CC.fmt(neurons.xyz.length)} sampled · retina map: ${info.retina.layout}`;
   } catch (e) {
     $("s-status").textContent = "studio offline";
-    $("offline-note").textContent = "the studio server is not running — the demonstration replays recorded sittings";
-    $("between-text").textContent = "studio offline · see the demonstration";
+    $("offline-note").textContent = "the brain is not running right now — this is the last recorded sitting, replayed";
+    $("between-text").textContent = "the fly is not painting right now";
+    $("c-mint").textContent = "by hand — the keeper mints finished sittings and lists them on OpenSea";
+    offlineReplay();
     return;
+  }
+
+  /* studio offline: replay the most recent recorded sitting in the stage instead of a dead frame */
+  async function offlineReplay() {
+    let index = [];
+    try { index = await getJSON("recordings/index.json"); } catch (e) { return; }
+    if (!index.length) { $("between-text").textContent = "no sittings yet · the first one is coming"; return; }
+    index.sort((a, b) => b.id - a.id);
+    const p = index[0];
+    let score;
+    try { score = await getJSON("recordings/" + p.recording.split("/").pop()); } catch (e) { return; }
+    frame.hidden = true; const cv = $("replaycv"); cv.hidden = false;
+    stage.classList.remove("idle");
+    document.querySelector(".stage .tag").textContent = `recorded sitting #${p.id} · replayed`;
+    $("s-sitting").textContent = "#" + p.id; $("s-neurons").textContent = CC.fmt(score.piece.neurons); $("s-edges").textContent = CC.fmt(score.piece.edges);
+    $("v-n").textContent = CC.fmt(score.piece.neurons); $("v-budget").textContent = (score.ticks.length * score.tick_ms / 1000).toFixed(1);
+    scatter = CC.Scatter($("scatter"), score.neurons); $("scatter-note").textContent = `${CC.fmt(score.neurons.xyz.length)} sampled · from the score`;
+    const eyeCv = document.createElement("canvas"); eyeCv.width = eyeCv.height = 120; eye.replaceWith(eyeCv);
+    let sw = [], lastSw = null;
+    const rp = Replay({ canvas: cv, eyeCanvas: eyeCv, cursorEl: cursor, stageEl: stage,
+      onTick(s) {
+        const t = s.t; if (!t) return;
+        $("v-firing").textContent = CC.fmt(t[7]); $("v-sps").textContent = CC.fmt(Math.round(t[6] * 1000 / score.tick_ms));
+        $("v-strokes").textContent = s.strokes; $("v-lifts").textContent = s.lifts; $("v-rev").textContent = s.reversals;
+        $("v-bt").textContent = (s.brainMs / 1000).toFixed(1); $("s-brainms").textContent = (s.brainMs / 1000).toFixed(2) + " s";
+        const l = t[8], r = t[9], pm = Math.max(10, l + r);
+        $("b-l").style.width = (l / pm * 50) + "%"; $("b-r").style.width = (r / pm * 50) + "%"; $("h-l").textContent = l.toFixed(0); $("h-r").textContent = r.toFixed(0);
+        bar("b-fwd", t[10], 120); $("h-fwd").textContent = t[10].toFixed(0); bar("b-mdn", t[11], 120); $("h-mdn").textContent = t[11].toFixed(0); bar("b-stop", t[12], 120); $("h-stop").textContent = t[12].toFixed(0);
+        $("chip").style.background = t[5]; $("t-colour").textContent = t[5];
+        $("t-brush").textContent = `brush ${t[2] ? "up" : "down"} · ${t[4]} px · (${Math.round(t[0])}, ${Math.round(t[1])})`;
+        if (!t[2] && t[5] !== lastSw) { lastSw = t[5]; sw.push(t[5]); if (sw.length > 16) sw.shift(); $("swatches").innerHTML = sw.map(c => `<i style="background:${c}"></i>`).join(""); }
+        if (scatter) scatter.fire(t[13]);
+      },
+      onEnd() { setTimeout(() => { sw = []; lastSw = null; rp.restart(); }, 4000); } });
+    rp.load(score); rp.setSpeed(40); rp.play();
+    $("log").innerHTML = `<li><span class="t">—</span><span class="k-session">replaying sitting #${p.id} · seed ${p.seed} · ${p.strokes} strokes · ${CC.fmt(p.spikes)} spikes</span></li>`;
   }
 
   function bar(id, hz, max) { $(id).style.width = Math.min(100, hz / max * 100) + "%"; }
@@ -221,8 +264,9 @@
     try { s = await getJSON("api/state"); } catch (e) { $("s-status").textContent = "reconnecting"; $("s-status").className = "between"; return; }
     const painting = s.status === "painting";
     stage.classList.toggle("idle", !painting);
-    $("s-status").textContent = painting ? "painting live" : "between sittings";
+    $("s-status").textContent = painting ? "painting live" : (s.resting ? "the studio is resting" : "between sittings");
     $("s-status").className = painting ? "live" : "between";
+    $("between-text").textContent = s.resting ? `the fly has finished ${s.sittings_done} sitting${s.sittings_done === 1 ? "" : "s"} and rests` : "between sittings";
     $("next-in").textContent = s.next_sitting_in_s != null ? `next sitting in ${s.next_sitting_in_s}s` : "";
 
     const w = s.window;

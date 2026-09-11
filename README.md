@@ -97,18 +97,31 @@ The studio pages read `/api/*` from the server. Without a server the demonstrati
 gallery fall back to `site/recordings/`, which is static — the whole site deploys to Vercel or
 GitHub Pages as files.
 
-### Chain
+### Chain — the simple way (Robinhood Chain, listed by hand)
+
+OpenSea indexes Robinhood Chain (chain id 4663, slug `robinhood`), and gas there costs a fraction
+of a cent, so the cheapest honest pipeline is: the fly paints, the painter wallet mints the token
+straight into the keeper's wallet, the keeper lists it on opensea.io with a signature.
 
 ```bash
-python run.py wallet new                 # encrypted keystore at ~/.connectome-canvas/keystore.json
-forge install OpenZeppelin/openzeppelin-contracts foundry-rs/forge-std   # in contracts/
-PAINTER=0x... forge script contracts/script/Deploy.s.sol --rpc-url https://mainnet.base.org --account painter --broadcast
-export CANVAS_CONTRACT=0x...  CANVAS_PINATA_JWT=...  OPENSEA_API_KEY=...
-python run.py mint 1                     # dry run: shows the metadata, signs nothing
-python run.py mint 1 --live              # pins PNG + metadata, mints, records token id + tx
-python run.py list 1 --price 0.02        # Seaport listing through opensea-js (cd tools && npm install)
-CANVAS_MINT=1 CANVAS_LIST_ETH=0.02 python run.py serve   # the studio does all of it after every sitting
+python run.py wallet new                         # painter keystore at ~/.connectome-canvas/keystore.json; fund it with ~0.001 ETH on Robinhood Chain
+cd tools && npm install && cd ..                 # OpenZeppelin for the compiler (py-solc-x, no Foundry needed)
+python run.py deploy                             # dry run: compiles, estimates gas
+python run.py deploy --live                      # deploys ConnectomeCanvas on Robinhood Chain -> CANVAS_CONTRACT
+export CANVAS_CONTRACT=0x...  CANVAS_OWNER=0xYourWallet   # tokens are minted to CANVAS_OWNER
+python run.py serve --sittings 1                 # the fly paints one sitting and rests
+python run.py mint 1                             # dry run: shows the metadata
+python run.py mint 1 --live                      # writes site/nft/1.json + png, mints token 1 to CANVAS_OWNER
+python run.py publish                            # pushes site/ (gallery, score, nft metadata) to Vercel
 ```
+
+Then on opensea.io: connect the `CANVAS_OWNER` wallet on Robinhood Chain → the token is in your
+profile within minutes → *Sell* → price → sign. The first listing also asks for one `setApprovalForAll`
+transaction (cents). No API key, no Pinata: with `CANVAS_METADATA=site` the image and JSON are served
+from connectomecanvas.com/nft/, and the PNG hash plus the seed are on chain regardless.
+
+`CANVAS_METADATA=ipfs` (Pinata) and `run.py list` (opensea-js, needs `OPENSEA_API_KEY`) remain for the
+fully automatic mode: `CANVAS_MINT=1 CANVAS_LIST_ETH=0.02 python run.py serve`.
 
 The private key exists only inside the encrypted keystore, outside the repository. It is never in
 `.env`, never in an environment variable, never printed. The passphrase is asked for on the terminal

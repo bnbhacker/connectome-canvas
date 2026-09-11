@@ -41,11 +41,15 @@ def _env_int(name: str, default: int) -> int:
 class Studio:
     """Sittings, one after another, forever."""
 
-    def __init__(self, painter: Painter, pause_s: float = 20.0, mint: bool = False, list_eth: str | None = None):
+    def __init__(self, painter: Painter, pause_s: float = 20.0, mint: bool = False, list_eth: str | None = None,
+                 max_sittings: int = 0):
         self.painter = painter
         self.pause_s = pause_s
         self.mint = mint and not painter.brain.surrogate
         self.list_eth = list_eth
+        self.max_sittings = max_sittings          # 0 = paint forever; N = paint N sittings, then rest
+        self.done = 0
+        self.resting = False
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self._run, name="studio", daemon=True)
         self.next_sitting_at: float | None = None
@@ -56,14 +60,22 @@ class Studio:
     def _run(self) -> None:
         p = self.painter
         while not self.stop.is_set():
+            if self.max_sittings and self.done >= self.max_sittings:
+                self.resting = True
+                p.event("rest", f"the studio is resting after {self.done} sitting(s); restart with a higher --sittings to paint more")
+                self.stop.wait()
+                break
             p.new_session()
             while not self.stop.is_set() and p.tick():
                 time.sleep(0)
             if self.stop.is_set():
                 break
+            self.done += 1
             piece = p.finished[-1] if p.finished else None
             if piece and self.mint:
                 threading.Thread(target=self._mint, args=(piece["id"],), daemon=True).start()
+            if self.max_sittings and self.done >= self.max_sittings:
+                continue
             self.next_sitting_at = time.time() + self.pause_s
             self.stop.wait(self.pause_s)
             self.next_sitting_at = None
@@ -94,7 +106,8 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
                       gains_path=gains if gains.exists() else None)
     studio = Studio(painter, pause_s=float(os.environ.get("CANVAS_PAUSE_S", 20)),
                     mint=os.environ.get("CANVAS_MINT", "0") == "1",
-                    list_eth=os.environ.get("CANVAS_LIST_ETH") or None)
+                    list_eth=os.environ.get("CANVAS_LIST_ETH") or None,
+                    max_sittings=_env_int("CANVAS_SITTINGS", 0))
 
     app = FastAPI(title="Connectome Canvas", docs_url=None, redoc_url=None)
     app.state.painter = painter
@@ -126,6 +139,9 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
         d = painter.state()
         d["next_sitting_in_s"] = None if studio.next_sitting_at is None else max(0, round(studio.next_sitting_at - time.time()))
         d["mint_enabled"] = studio.mint
+        d["resting"] = studio.resting
+        d["sittings_done"] = studio.done
+        d["sittings_max"] = studio.max_sittings
         d["now"] = time.time()
         return JSONResponse(d, headers={"Cache-Control": "no-store"})
 
@@ -164,8 +180,10 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
     return app
 
 
-def serve(port: int = 4660, host: str = "127.0.0.1", graph_path: Path | None = None) -> None:
+def serve(port: int = 4660, host: str = "127.0.0.1", graph_path: Path | None = None, sittings: int | None = None) -> None:
     import uvicorn
+    if sittings is not None:
+        os.environ["CANVAS_SITTINGS"] = str(sittings)
     uvicorn.run(build_app(graph_path), host=host, port=port, log_level="warning")
 
 

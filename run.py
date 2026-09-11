@@ -9,8 +9,10 @@ Connectome Canvas — command line.
     python run.py replay ID             re-run a finished piece from its seed and compare hashes
     python run.py serve [--port 4660]   the studio: sittings back to back + the site
     python run.py wallet new            create the painter's encrypted keystore (outside the repo)
-    python run.py mint ID [--live]      pin + mint a finished piece (dry run unless --live)
-    python run.py list ID --price 0.02  create an OpenSea listing for a minted piece
+    python run.py deploy [--live]       compile + deploy the contract (Robinhood Chain by default)
+    python run.py mint ID [--live]      publish metadata + mint a finished piece (dry run unless --live)
+    python run.py publish               push site/ (gallery, recordings, nft metadata) to Vercel
+    python run.py list ID --price 0.02  optional: create an OpenSea listing from the CLI
 """
 from __future__ import annotations
 
@@ -72,7 +74,7 @@ def cmd_replay(args: argparse.Namespace) -> None:
 
 def cmd_serve(args: argparse.Namespace) -> None:
     from server import serve
-    serve(port=args.port, host=args.host, graph_path=Path(args.graph) if args.graph else None)
+    serve(port=args.port, host=args.host, graph_path=Path(args.graph) if args.graph else None, sittings=args.sittings)
 
 
 def cmd_wallet(args: argparse.Namespace) -> None:
@@ -94,6 +96,29 @@ def cmd_list(args: argparse.Namespace) -> None:
     from chain.opensea import list_piece
     import json
     print(json.dumps(list_piece(args.id, args.price, days=args.days), indent=1))
+
+
+def cmd_deploy(args: argparse.Namespace) -> None:
+    from chain.deploy import deploy
+    import json
+    print(json.dumps(deploy(args.network, royalty=args.royalty, dry_run=not args.live), indent=1))
+
+
+def cmd_publish(args: argparse.Namespace) -> None:
+    """Copy site/ to an ASCII path (Vercel chokes on non-ASCII paths on Windows) and deploy it."""
+    import shutil
+    import subprocess
+    import tempfile
+    stage = Path(args.stage) if args.stage else Path(tempfile.gettempdir()) / "cc-site"
+    if stage.exists():
+        shutil.rmtree(stage)
+    shutil.copytree(ROOT / "site", stage)
+    print(f"staged site/ -> {stage}")
+    cmd = ["vercel", "--prod", "--yes", "--name", "connectome-canvas"]
+    if args.scope:
+        cmd += ["--scope", args.scope]
+    print(" ".join(cmd))
+    subprocess.run(cmd, cwd=stage, shell=(sys.platform == "win32"), check=False)
 
 
 def main() -> None:
@@ -118,6 +143,7 @@ def main() -> None:
     p.add_argument("--port", type=int, default=4660)
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--graph", default=None)
+    p.add_argument("--sittings", type=int, default=None, help="paint this many sittings, then rest (default: forever)")
 
     p = sub.add_parser("wallet")
     p.add_argument("action", choices=["new", "address"])
@@ -131,6 +157,15 @@ def main() -> None:
     p.add_argument("--price", required=True, help="ETH")
     p.add_argument("--days", type=int, default=30)
 
+    p = sub.add_parser("deploy", help="compile with py-solc-x and deploy ConnectomeCanvas.sol")
+    p.add_argument("--network", default="robinhood", choices=["robinhood", "base", "base-sepolia"])
+    p.add_argument("--royalty", default=None, help="royalty receiver (default: the painter wallet)")
+    p.add_argument("--live", action="store_true", help="broadcast; default is a dry run with a gas estimate")
+
+    p = sub.add_parser("publish", help="deploy site/ to Vercel from an ASCII staging path")
+    p.add_argument("--stage", default=None)
+    p.add_argument("--scope", default="bnbhackers-projects")
+
     args = ap.parse_args()
     if args.cmd in ("fetch", "describe", "build"):
         from brain import graph
@@ -140,7 +175,7 @@ def main() -> None:
         print(f"wrote {build()} (surrogate, not a fly)")
     else:
         {"paint": cmd_paint, "replay": cmd_replay, "serve": cmd_serve, "wallet": cmd_wallet,
-         "mint": cmd_mint, "list": cmd_list}[args.cmd](args)
+         "mint": cmd_mint, "list": cmd_list, "deploy": cmd_deploy, "publish": cmd_publish}[args.cmd](args)
 
 
 if __name__ == "__main__":
