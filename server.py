@@ -49,6 +49,7 @@ class Studio:
         self.list_eth = list_eth                  # the listing price, in units of list_currency
         self.list_currency = list_currency or "ETH"
         self._list_paused_until = 0.0             # set when OpenSea wants another currency; re-checked later
+        self.list_last_error: str | None = None
         self.max_sittings = max_sittings          # 0 = paint forever; N = paint N sittings, then rest
         self.done = 0
         self.resting = False
@@ -187,7 +188,9 @@ class Studio:
                     # the currency is a person's decision: never convert, never burn retries on it; look again in 10 min
                     self._list_paused_until = time.time() + 600
                     self._list_posts.pop()            # a refusal like this is not worth a slot in the hourly budget
-                    self.painter.event("error", f"automatic listing paused, re-checking in 10 min: {str(e)[:240]}", 540)
+                    self.list_last_error = str(e)[:400]
+                    # its own event kind: sharing "error" with a min-gap let an earlier error swallow this line
+                    self.painter.event("list", f"automatic listing paused, re-checking in 10 min: {str(e)[:240]}")
                     break
                 gp = GALLERY / f"canvas-{p['id']:04d}.json"
                 try:
@@ -353,6 +356,8 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
         d["sittings_max"] = studio.max_sittings
         d["list_eth"] = studio.list_eth
         d["list_currency"] = studio.list_currency
+        d["list_paused_for_s"] = max(0, round(studio._list_paused_until - time.time()))
+        d["list_last_error"] = studio.list_last_error
         d["now"] = time.time()
         return JSONResponse(d, headers={"Cache-Control": "no-store"})
 
