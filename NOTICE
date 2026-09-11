@@ -1,4 +1,4 @@
-Connectome Canvas
+Canvas Fly
 =================
 
 The code in this repository is MIT licensed — see LICENSE. That licence covers
@@ -14,9 +14,9 @@ fork this, keep that attribution — it is the whole reason any of this is real.
 The neuron model follows Shiu et al. 2024 (Nature) and the retinotopic drive is
 argued for by Lappalainen et al. 2024 (Nature). Wiring this connectome to a
 cursor through the descending neurons DNa02 / DNa01 / MDN / DNp09 was done first
-and openly by the flybrain project (MIT); Connectome Canvas is an independent
+and openly by the flybrain project (MIT); Canvas Fly is an independent
 implementation that points the same anatomy at a canvas.
 
 Paintings produced by this software are hashed and, when minted, those hashes
-and seeds are recorded on chain. Connectome Canvas is an art experiment, not an
+and seeds are recorded on chain. Canvas Fly is an art experiment, not an
 investment, and nothing here is financial advice.

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The brain — Connectome Canvas</title>
-<meta name="description" content="What runs under Connectome Canvas: the male Drosophila CNS connectome as a spiking network, how it sees, how it moves the brush, what is and is not real.">
+<title>The brain — Canvas Fly</title>
+<meta name="description" content="What runs under Canvas Fly: the male Drosophila CNS connectome as a spiking network, how it sees, how it moves the brush, what is and is not real.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -112,8 +112,8 @@ python run.py replay 12    # MATCH or DIFFERENT, with both hashes</pre>
       <a href="https://storage.googleapis.com/flyem-male-cns/" target="_blank" rel="noopener">gs://flyem-male-cns</a>.</p>
     <p><b>Model.</b> Shiu, P. K. et al. "A Drosophila computational brain model reveals sensorimotor processing." <i>Nature</i> 2024 — the LIF parameters and the 0.275 mV per synapse.
       Lappalainen, J. K. et al. "Connectome-constrained networks predict neural activity across the fly visual system." <i>Nature</i> 2024 — the case for driving the optic lobe with real retinotopy.</p>
-    <p><b>Precedent.</b> The idea of wiring this connectome to a cursor through DNa02 / DNa01 / MDN / DNp09 was done first, and openly, by flybrain (MIT). Connectome Canvas is a separate implementation that points the same anatomy at a canvas instead of a launchpad.</p>
-    <p>Not affiliated with any of the above. Connectome Canvas is an art experiment, not an investment.</p>
+    <p><b>Precedent.</b> The idea of wiring this connectome to a cursor through DNa02 / DNa01 / MDN / DNp09 was done first, and openly, by flybrain (MIT). Canvas Fly is a separate implementation that points the same anatomy at a canvas instead of a launchpad.</p>
+    <p>Not affiliated with any of the above. Canvas Fly is an art experiment, not an investment.</p>
   </div>
 </main>
 
@@ -127,7 +127,8 @@ python run.py replay 12    # MATCH or DIFFERENT, with both hashes</pre>
 (async function () {
   const $ = id => document.getElementById(id);
   try {
-    const r = await fetch("api/info", { cache: "no-store" }); if (!r.ok) return;
+    if (await CC.resolveBase() === null) return;
+    const r = await fetch(CC.U("api/info"), { cache: "no-store" }); if (!r.ok) return;
     const i = await r.json();
     $("s-neurons").textContent = CC.fmt(i.neurons); $("s-edges").textContent = CC.fmt(i.edges); $("s-syn").textContent = CC.fmt(i.synapses);
     $("i-neurons").textContent = CC.fmt(i.neurons); $("i-edges").textContent = CC.fmt(i.edges);

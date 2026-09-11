@@ -1,7 +1,7 @@
 [
  {
   "id": 1,
-  "name": "Connectome Canvas #1",
+  "name": "Canvas Fly #1",
   "png": "canvas-0001.png",
   "thumb": "canvas-0001.jpg",
   "seed": 912782867,
@@ -30,7 +30,7 @@
  },
  {
   "id": 2,
-  "name": "Connectome Canvas #2",
+  "name": "Canvas Fly #2",
   "png": "canvas-0002.png",
   "thumb": "canvas-0002.jpg",
   "seed": 2853223570,
@@ -59,7 +59,7 @@
  },
  {
   "id": 3,
-  "name": "Connectome Canvas #3",
+  "name": "Canvas Fly #3",
   "png": "canvas-0003.png",
   "thumb": "canvas-0003.jpg",
   "seed": 4185039620,
@@ -88,7 +88,7 @@
  },
  {
   "id": 4,
-  "name": "Connectome Canvas #4",
+  "name": "Canvas Fly #4",
   "png": "canvas-0004.png",
   "thumb": "canvas-0004.jpg",
   "seed": 3883392808,
@@ -113,6 +113,35 @@
   ],
   "png_sha256": "66809aef830383e44b3afd37c093161494b7211dd20df139495def8a7c65b966",
   "synapses_changed": 0,
+  "chain": null
+ },
+ {
+  "id": 5,
+  "name": "Canvas Fly #5",
+  "png": "canvas-0005.png",
+  "thumb": "canvas-0005.jpg",
+  "seed": 3979258054,
+  "recording": "recordings/canvas-0005.json",
+  "strokes": 27,
+  "spikes": 4023698,
+  "brain_ms": 6000.0,
+  "surrogate": false,
+  "swatches": [
+   "#53bebd",
+   "#52babd",
+   "#4ebcb8",
+   "#54bebd",
+   "#57bfbb",
+   "#56b8bf",
+   "#52bdb5",
+   "#5abec0",
+   "#51bdbc",
+   "#5bb3c0",
+   "#55b9be",
+   "#59c0be"
+  ],
+  "png_sha256": "1c5d0bad49a9cfb0cc2295e3a7d81220dac42175268692c2e53ab17e7fba7c3b",
+  "synapses_changed": 2,
   "chain": null
  }
 ]

@@ -1,4 +1,4 @@
-# Connectome Canvas
+# Canvas Fly
 
 **A real fruit-fly nervous system paints. The paintings are minted.**
 
@@ -172,4 +172,4 @@ Lappalainen et al. 2024 (Nature). Wiring this connectome to a cursor through DNa
 DNp09 was done first, openly, by the flybrain project (MIT); this is an independent implementation
 pointed at a canvas. Not affiliated with any of them, nor with OpenSea or Robinhood.
 
-Connectome Canvas is an art experiment, not an investment.
+Canvas Fly is an art experiment, not an investment.

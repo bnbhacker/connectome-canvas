@@ -384,7 +384,7 @@ class Painter:
             top = self._top_types(counts_total)
             piece = {
                 "id": s.id,
-                "name": f"Connectome Canvas #{s.id}",
+                "name": f"Canvas Fly #{s.id}",
                 "seed": s.seed,
                 "finished_at": time.time(),
                 "wall_seconds": round(time.time() - s.started, 1),

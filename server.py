@@ -82,16 +82,17 @@ class Studio:
             self.stop.wait(self.pause_s)
             self.next_sitting_at = None
 
-    def _publish(self, piece_id: int) -> None:
-        """Push site/ (new score, thumbnail, gallery index) to Vercel so the public replay stays current."""
+    def _publish(self, what) -> None:
+        """Push site/ (scores, thumbnails, gallery index, live.json) to Vercel so the public site stays current."""
         import subprocess
         import sys
+        label = f"sitting #{what}" if isinstance(what, int) else str(what)
         try:
-            self.painter.event("publish", f"publishing sitting #{piece_id} to the site …")
+            self.painter.event("publish", f"publishing {label} to the site …")
             proc = subprocess.run([sys.executable, str(ROOT / "run.py"), "publish"], cwd=ROOT,
                                   capture_output=True, text=True, timeout=600)
             if proc.returncode == 0:
-                self.painter.event("publish", f"site updated with sitting #{piece_id}")
+                self.painter.event("publish", f"site updated · {label}")
             else:
                 self.painter.event("error", f"publish failed: {(proc.stderr or proc.stdout).strip()[-200:]}")
         except Exception as e:
@@ -112,6 +113,51 @@ class Studio:
             self.painter.event("error", f"chain step failed for #{piece_id}: {type(e).__name__}: {e}")
 
 
+class Tunnel:
+    """A Cloudflare quick tunnel in front of the local studio, so the public site can reach the live brain.
+
+    No account and no DNS: cloudflared hands out a random https://….trycloudflare.com address, which
+    is written to site/live.json (and published) whenever it changes. The address dies with the process."""
+
+    URL_RE = __import__("re").compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
+
+    def __init__(self, port: int, on_ready) -> None:
+        self.port = port
+        self.on_ready = on_ready
+        self.url: str | None = None
+        self.proc = None
+
+    def start(self) -> None:
+        import shutil
+        import subprocess
+        exe = shutil.which("cloudflared")
+        if not exe:
+            candidate = Path.home() / "scoop" / "shims" / "cloudflared.exe"
+            exe = str(candidate) if candidate.exists() else None
+        if not exe:
+            raise RuntimeError("cloudflared not found (scoop install cloudflared)")
+        self.proc = subprocess.Popen(
+            [exe, "tunnel", "--url", f"http://127.0.0.1:{self.port}", "--no-autoupdate"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+        )
+        threading.Thread(target=self._pump, name="tunnel", daemon=True).start()
+
+    def _pump(self) -> None:
+        assert self.proc and self.proc.stdout
+        for line in self.proc.stdout:
+            m = self.URL_RE.search(line)
+            if m and not self.url:
+                self.url = m.group(0)
+                try:
+                    self.on_ready(self.url)
+                except Exception:
+                    pass
+
+    def stop(self) -> None:
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+
+
 def build_app(graph_path: Path | None = None) -> FastAPI:
     graph_path = resolve_graph(graph_path)
     if not graph_path.exists():
@@ -126,7 +172,7 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
                     list_eth=os.environ.get("CANVAS_LIST_ETH") or None,
                     max_sittings=_env_int("CANVAS_SITTINGS", 0))
 
-    app = FastAPI(title="Connectome Canvas", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Canvas Fly", docs_url=None, redoc_url=None)
     app.state.painter = painter
     app.state.studio = studio
 
@@ -135,20 +181,38 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
     from fastapi.middleware.cors import CORSMiddleware
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
 
+    tunnel: Tunnel | None = None
+    if os.environ.get("CANVAS_TUNNEL", "0") == "1":
+        def _tunnel_ready(url: str) -> None:
+            (SITE / "live.json").write_text(json.dumps({"studio": url, "since": time.time()}), encoding="utf-8")
+            painter.event("tunnel", f"studio reachable at {url}")
+            if os.environ.get("CANVAS_AUTOPUBLISH", "0") == "1":
+                threading.Thread(target=studio._publish, args=("the studio address",), daemon=True).start()
+        tunnel = Tunnel(_env_int("CANVAS_PORT", 4660), _tunnel_ready)
+    app.state.tunnel = tunnel
+
     @app.on_event("startup")
     def _start() -> None:
         studio.start()
+        if tunnel is not None:
+            try:
+                tunnel.start()
+            except Exception as e:
+                painter.event("error", f"tunnel failed: {e}")
 
     @app.on_event("shutdown")
     def _stop() -> None:
         studio.stop.set()
+        if tunnel is not None:
+            tunnel.stop()
 
     @app.get("/api/info")
     def info() -> JSONResponse:
         d = painter.info()
         d["mint_enabled"] = studio.mint
         d["contract"] = os.environ.get("CANVAS_CONTRACT", "")
-        d["network"] = os.environ.get("CANVAS_NETWORK", "base")
+        d["network"] = os.environ.get("CANVAS_NETWORK", "robinhood")
+        d["studio_url"] = tunnel.url if tunnel else None
         return JSONResponse(d)
 
     @app.get("/api/state")
@@ -198,7 +262,7 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
 
 
 def serve(port: int = 4660, host: str = "127.0.0.1", graph_path: Path | None = None, sittings: int | None = None,
-          pause_s: float | None = None, autopublish: bool = False) -> None:
+          pause_s: float | None = None, autopublish: bool = False, tunnel: bool = False) -> None:
     import uvicorn
     if sittings is not None:
         os.environ["CANVAS_SITTINGS"] = str(sittings)
@@ -206,6 +270,9 @@ def serve(port: int = 4660, host: str = "127.0.0.1", graph_path: Path | None = N
         os.environ["CANVAS_PAUSE_S"] = str(pause_s)
     if autopublish:
         os.environ["CANVAS_AUTOPUBLISH"] = "1"
+    if tunnel:
+        os.environ["CANVAS_TUNNEL"] = "1"
+    os.environ["CANVAS_PORT"] = str(port)
     uvicorn.run(build_app(graph_path), host=host, port=port, log_level="warning")
 
 

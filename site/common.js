@@ -27,13 +27,34 @@
       if (!nav) return;
       const cur = here();
       nav.innerHTML = `
-        <a class="brand" href="index.html">Connectome Canvas<small>a fly brain that paints</small></a>
+        <a class="brand" href="index.html">Canvas Fly<small>a connectome that paints</small></a>
         <div class="links">${NAV.map(([h, t]) => `<a href="${h}" class="${h === cur ? "on" : ""}">${t}</a>`).join("")}</div>
         <a class="x xbtn" href="https://x.com/Canvas_Fly" target="_blank" rel="noopener" title="@Canvas_Fly on X">
           <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           @Canvas_Fly</a>
         <a class="x" href="https://github.com/bnbhacker/connectome-canvas" target="_blank" rel="noopener">source ↗</a>`;
     },
+
+    /* Where is the live studio? Same origin (local server or a Vercel rewrite) first,
+       then the address the studio wrote into live.json when it opened its tunnel. */
+    fetchT(u, ms) {
+      const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+      return fetch(u, { cache: "no-store", signal: c.signal }).finally(() => clearTimeout(t));
+    },
+    async resolveBase() {
+      if (CC._base !== undefined) return CC._base;
+      try { const r = await CC.fetchT("api/info", 3500); if (r.ok) { const j = await r.json(); if (j && j.neurons) return (CC._base = ""); } } catch (e) {}
+      try {
+        const l = await (await CC.fetchT("live.json", 3000)).json();
+        if (l && l.studio) {
+          const base = String(l.studio).replace(/\/$/, "");
+          const r = await CC.fetchT(base + "/api/info", 7000);
+          if (r.ok) return (CC._base = base);
+        }
+      } catch (e) {}
+      return (CC._base = null);
+    },
+    U(p) { return CC._base ? CC._base + "/" + p : p; },
 
     copy(text, btn) {
       navigator.clipboard?.writeText(text).then(() => {

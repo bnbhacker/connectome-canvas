@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connectome Canvas — a fly brain that paints</title>
+<title>Canvas Fly — a fly brain that paints</title>
 <meta name="description" content="A real fruit-fly nervous system — 165,122 traced neurons of the male Drosophila connectome — paints on a canvas. Every finished sitting is minted on Robinhood Chain and listed on OpenSea.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@Canvas_Fly">
-<meta name="twitter:title" content="Connectome Canvas — a fly brain that paints">
+<meta name="twitter:title" content="Canvas Fly — a fly brain that paints">
 <meta name="twitter:description" content="165,122 real neurons of a fruit fly paint on a canvas. Scored, replayable, minted on Robinhood Chain.">
-<meta property="og:title" content="Connectome Canvas — a fly brain that paints">
+<meta property="og:title" content="Canvas Fly — a fly brain that paints">
 <meta property="og:description" content="165,122 real neurons of a fruit fly paint on a canvas. Scored, replayable, minted on Robinhood Chain.">
 <meta property="og:url" content="https://connectomecanvas.com/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +34,7 @@
 <main class="wrap">
   <section class="hero">
     <div>
-      <p class="kicker">Connectome Canvas · one token per sitting · Robinhood Chain</p>
+      <p class="kicker">Canvas Fly · one token per sitting · Robinhood Chain</p>
       <h1 class="title">A real fly brain <em>paints.</em><br>The paintings are minted.</h1>
       <p class="lede">Every connection in this thing was traced from electron microscope images of an actual male fruit fly.
         <b>165,122 neurons</b> integrate, the <b>descending neurons a fly walks with</b> move a brush, and the shape of the
@@ -165,7 +165,7 @@
   </div>
 
   <p class="kicker" style="margin-top:72px">On chain</p>
-  <h2 class="sec" style="margin-top:0">Connectome Canvas · CANVAS</h2>
+  <h2 class="sec" style="margin-top:0">Canvas Fly · CFLY</h2>
   <p class="sub">One ERC-721 per sitting, minted by the painter's own wallet on Robinhood Chain. Next to every token the contract stores the SHA-256 of the PNG and the sitting's seed, so provenance is checked against the block, not against this page. Listings are made by hand on OpenSea, which indexes Robinhood Chain.</p>
   <div class="panel">
     <div class="contract">
@@ -180,7 +180,7 @@
 
 <footer>
   Connectome data © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, released CC-BY 4.0. Simulation after Shiu et al. 2024.
-  Not affiliated with any of them, nor with OpenSea or Robinhood. Connectome Canvas is an art experiment, not an investment.
+  Not affiliated with any of them, nor with OpenSea or Robinhood. Canvas Fly is an art experiment, not an investment.
   · <a href="https://x.com/Canvas_Fly">@Canvas_Fly</a> · <a href="https://github.com/bnbhacker/connectome-canvas">source</a> · <a href="brain.html">the brain</a>
 </footer>
 
@@ -198,7 +198,9 @@
   async function getJSON(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); return r.json(); }
 
   try {
-    info = await getJSON("api/info");
+    if (await CC.resolveBase() === null) throw new Error("studio offline");
+    info = await getJSON(CC.U("api/info"));
+    if (CC._base) $("offline-note").textContent = "live from the studio through its tunnel";
     if (info.surrogate) document.body.classList.add("surrogate");
     $("s-dataset").textContent = info.surrogate ? "SURROGATE GRAPH" : "MALE CNS V1.0";
     $("s-neurons").textContent = CC.fmt(info.neurons);
@@ -214,7 +216,7 @@
       $("c-chain").textContent = chainName;
     }
     $("c-mint").textContent = info.mint_enabled ? "on — every finished sitting is minted as soon as it dries" : "by hand — the keeper mints finished sittings with run.py mint and lists them on OpenSea";
-    const neurons = await getJSON("api/neurons");
+    const neurons = await getJSON(CC.U("api/neurons"));
     scatter = CC.Scatter($("scatter"), neurons);
     $("scatter-note").textContent = `${CC.fmt(neurons.xyz.length)} sampled · retina map: ${info.retina.layout}`;
   } catch (e) {
@@ -266,7 +268,7 @@
 
   async function poll() {
     let s;
-    try { s = await getJSON("api/state"); } catch (e) { $("s-status").textContent = "reconnecting"; $("s-status").className = "between"; return; }
+    try { s = await getJSON(CC.U("api/state")); } catch (e) { $("s-status").textContent = "reconnecting"; $("s-status").className = "between"; return; }
     const painting = s.status === "painting";
     stage.classList.toggle("idle", !painting);
     $("s-status").textContent = painting ? "painting live" : (s.resting ? "the studio is resting" : "between sittings");
@@ -321,15 +323,15 @@
     $("log").innerHTML = s.events.slice(0, 40).map(e => `<li><span class="t">${CC.hhmm(e.t)}</span><span class="k-${e.kind}">${CC.esc(e.text)}</span></li>`).join("") || "<li><span class='t'>—</span><span>quiet</span></li>";
 
     if (painting || frameTick % 5 === 0) {
-      frame.src = "api/frame.png?size=768&t=" + Date.now();
-      eye.src = "api/eye.png?t=" + Date.now();
+      frame.src = CC.U("api/frame.png?size=768&t=" + Date.now());
+      eye.src = CC.U("api/eye.png?t=" + Date.now());
     }
     frameTick++;
   }
 
   async function loadLatest() {
     try {
-      const items = await getJSON("api/gallery");
+      const items = await getJSON(CC.U("api/gallery"));
       const el = $("latest");
       if (!items.length) return;
       el.innerHTML = items.slice(0, 4).map(p => pieceCard(p)).join("");
@@ -338,7 +340,7 @@
   function pieceCard(p) {
     const ch = p.chain || {};
     const status = ch.listing ? `<span class="status listed">listed · ${ch.listing.price_eth} ETH</span>` : ch.token_id != null ? `<span class="status minted">minted · token ${ch.token_id}</span>` : `<span class="status">${p.surrogate ? "surrogate · not minted" : "awaiting mint"}</span>`;
-    return `<div class="piece"><a href="demo.html#${p.id}"><img src="gallery/${p.png}" alt="${CC.esc(p.name)}" loading="lazy"></a>
+    return `<div class="piece"><a href="demo.html#${p.id}"><img src="${CC.U("gallery/" + p.png)}" alt="${CC.esc(p.name)}" loading="lazy"></a>
       <div class="meta"><div class="name">${CC.esc(p.name)}</div>
       <div class="sw">${(p.swatches || []).slice(0, 8).map(c => `<i style="background:${c}"></i>`).join("")}</div>
       <div class="stats"><span>${(p.brain_ms / 1000).toFixed(1)} s brain</span><span>${p.strokes} strokes</span><span>${CC.fmt(p.spikes)} spikes</span><span>seed ${p.seed}</span></div>

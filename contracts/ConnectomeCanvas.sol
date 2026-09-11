@@ -6,7 +6,7 @@ import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title Connectome Canvas
+/// @title Canvas Fly
 /// @notice One token per sitting of a simulated fruit-fly nervous system.
 ///
 ///         Two roles. The *owner* is the keeper: a person's wallet that manages
@@ -34,7 +34,7 @@ contract ConnectomeCanvas is ERC721URIStorage, ERC2981, Ownable {
     error NotPainter(address caller);
 
     constructor(address keeper, address painter_, address royaltyReceiver)
-        ERC721("Connectome Canvas", "CANVAS")
+        ERC721("Canvas Fly", "CFLY")
         Ownable(keeper)
     {
         painter = painter_;
