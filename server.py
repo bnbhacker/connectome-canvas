@@ -180,10 +180,13 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
     return app
 
 
-def serve(port: int = 4660, host: str = "127.0.0.1", graph_path: Path | None = None, sittings: int | None = None) -> None:
+def serve(port: int = 4660, host: str = "127.0.0.1", graph_path: Path | None = None, sittings: int | None = None,
+          pause_s: float | None = None) -> None:
     import uvicorn
     if sittings is not None:
         os.environ["CANVAS_SITTINGS"] = str(sittings)
+    if pause_s is not None:
+        os.environ["CANVAS_PAUSE_S"] = str(pause_s)
     uvicorn.run(build_app(graph_path), host=host, port=port, log_level="warning")
 
 

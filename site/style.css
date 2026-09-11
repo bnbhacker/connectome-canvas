@@ -61,6 +61,9 @@ code { font-family: var(--mono); background: var(--ink-3); padding: 1px 5px; bor
 .nav .links a { color: var(--paper-dim); }
 .nav .links a.on, .nav .links a:hover { color: var(--paper); text-decoration: none; border-bottom: 1px solid var(--ochre); padding-bottom: 2px; }
 .nav .x { margin-left: auto; font-size: 11px; color: var(--paper-dim); white-space: nowrap; }
+.nav .x + .x { margin-left: 16px; }
+.nav .xbtn { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid var(--line-2); border-radius: 3px; color: var(--paper); letter-spacing: .06em; }
+.nav .xbtn:hover { border-color: var(--ochre); color: var(--ochre); text-decoration: none; }
 @media (max-width: 760px) {
   .nav { flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px; }
   .nav .brand { font-size: 19px; white-space: nowrap; }

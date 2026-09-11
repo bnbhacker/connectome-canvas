@@ -74,7 +74,8 @@ def cmd_replay(args: argparse.Namespace) -> None:
 
 def cmd_serve(args: argparse.Namespace) -> None:
     from server import serve
-    serve(port=args.port, host=args.host, graph_path=Path(args.graph) if args.graph else None, sittings=args.sittings)
+    serve(port=args.port, host=args.host, graph_path=Path(args.graph) if args.graph else None, sittings=args.sittings,
+          pause_s=args.pause)
 
 
 def cmd_wallet(args: argparse.Namespace) -> None:
@@ -144,6 +145,7 @@ def main() -> None:
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--graph", default=None)
     p.add_argument("--sittings", type=int, default=None, help="paint this many sittings, then rest (default: forever)")
+    p.add_argument("--pause", type=float, default=None, help="seconds between sittings (default: CANVAS_PAUSE_S or 20)")
 
     p = sub.add_parser("wallet")
     p.add_argument("action", choices=["new", "address"])
