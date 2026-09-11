@@ -114,6 +114,25 @@ The private key exists only inside the encrypted keystore, outside the repositor
 `.env`, never in an environment variable, never printed. The passphrase is asked for on the terminal
 (or read from a file named by `CANVAS_KEYSTORE_PASSWORD_FILE` for unattended runs).
 
+### Hosting
+
+Two halves, two hosts:
+
+| what | where | how |
+|---|---|---|
+| the site (`site/`) | Vercel, **connectomecanvas.com** | static files; `site/vercel.json` rewrites `/api/*` and `/gallery/*` to the studio |
+| the studio (`server.py`) | Railway (or any Docker host), **studio.connectomecanvas.com** | `Dockerfile` — pulls the built graph from the `graph-v1.0` GitHub release instead of the 540 MB data, so the image builds in about a minute |
+
+```bash
+# site: deploy the folder, not the repo root (Windows: copy site/ to an ASCII path first)
+cd site && vercel --prod
+# studio: connect the repo in Railway → it reads railway.json + Dockerfile; set env from .env.example
+```
+
+DNS at the registrar: `@` A `76.76.21.21`, `www` CNAME `cname.vercel-dns.com`, `studio` CNAME → the
+target Railway prints when you add the custom domain. Without the studio the site still works: the
+demonstration and the gallery read `site/recordings/`, and the studio page says so.
+
 ## Layout
 
 ```

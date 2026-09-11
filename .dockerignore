@@ -1,0 +1,10 @@
+data/
+build/
+gallery/
+site/recordings/
+tools/node_modules/
+.git/
+.venv/
+__pycache__/
+*.pyc
+.env

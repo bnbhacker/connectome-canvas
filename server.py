@@ -100,6 +100,11 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
     app.state.painter = painter
     app.state.studio = studio
 
+    # The public site normally reaches this server through Vercel rewrites (same origin).
+    # CORS is opened read-only so the pages also work when pointed straight at the studio.
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
+
     @app.on_event("startup")
     def _start() -> None:
         studio.start()
