@@ -103,10 +103,11 @@ def deploy(network: str, keeper: str | None = None, royalty: str | None = None, 
 
     max_supply = int(os.environ.get("CANVAS_MAX_SUPPLY", "5000"))
     base_uri = os.environ.get("CANVAS_BASE_URI") or (os.environ.get("CANVAS_SITE_URL", "https://connectomecanvas.com").rstrip("/") + "/nft/")
-    print(f"maxSupply {max_supply} · baseURI {base_uri}")
+    contract_uri = os.environ.get("CANVAS_CONTRACT_URI") or base_uri + "collection.json"
+    print(f"maxSupply {max_supply} · baseURI {base_uri} · contractURI {contract_uri}")
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
     gas_price = w3.eth.gas_price
-    tx = contract.constructor(keeper_addr, painter, royalty_addr, max_supply, base_uri).build_transaction({
+    tx = contract.constructor(keeper_addr, painter, royalty_addr, max_supply, base_uri, contract_uri).build_transaction({
         "from": painter,
         "nonce": w3.eth.get_transaction_count(painter),
         "chainId": net["chain_id"],

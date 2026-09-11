@@ -1,0 +1,8 @@
+{
+  "name": "Canvas Fly",
+  "description": "Paintings by a real fruit-fly nervous system. 165,122 traced neurons of the male Drosophila CNS connectome (HHMI Janelia FlyEM, Cambridge Connectomics Group, Google Research, CC-BY 4.0) look at a canvas through the fly's own retina and move a brush with the descending neurons a fly walks with. One token per sitting, 5,000 at most. The synaptic gains evolve between sittings, so the pictures drift. Every token stores the PNG's SHA-256 and the sitting's seed on chain, replayable to the pixel. Watch it paint: https://connectomecanvas.com",
+  "image": "https://connectomecanvas.com/nft/canvas-0001.png",
+  "external_link": "https://connectomecanvas.com",
+  "seller_fee_basis_points": 500,
+  "fee_recipient": "0x45445e33510f24393367f0b10c0c9a88a873fa5a"
+}

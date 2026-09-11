@@ -143,6 +143,30 @@ def cmd_sweep(args: argparse.Namespace) -> None:
     print(f"sent: {net['explorer']}/tx/{h.hex()} status={rc.status}")
 
 
+def cmd_mint_all(args: argparse.Namespace) -> None:
+    """Mint every unminted piece in order: metadata first, then the site, then the chain."""
+    from chain.mint import prepare_metadata, mint_backlog, unminted
+    pending = unminted()
+    print(f"{len(pending)} unminted piece(s)" + (f": sittings #{pending[0]['id']}…#{pending[-1]['id']}" if pending else ""))
+    if not pending:
+        return
+    if not args.live:
+        print("dry run; add --live to write metadata, publish the site and mint")
+        return
+    prepared = prepare_metadata()
+    if not prepared:
+        print("nothing to mint")
+        return
+    print(f"metadata written: sitting #{prepared[0][0]} -> token {prepared[0][1]} … sitting #{prepared[-1][0]} -> token {prepared[-1][1]}")
+    site = argparse.Namespace(stage=None, scope="bnbhackers-projects")
+    if not args.no_publish:
+        cmd_publish(site)
+    mint_backlog(ids=[pid for pid, _ in prepared],
+                 on_result=lambda r: print(f"  token {r['token_id']}  {r['explorer']}", flush=True))
+    if not args.no_publish:
+        cmd_publish(site)
+
+
 def cmd_deploy(args: argparse.Namespace) -> None:
     from chain.deploy import deploy
     import json
@@ -233,6 +257,10 @@ def main() -> None:
     p.add_argument("--days", type=int, default=30)
     p.add_argument("--dry-run", action="store_true", help="build and sign the Seaport order, post nothing")
 
+    p = sub.add_parser("mint-all", help="mint every unminted piece in order (metadata, then the site, then the chain)")
+    p.add_argument("--live", action="store_true")
+    p.add_argument("--no-publish", action="store_true")
+
     p = sub.add_parser("sweep", help="send the painter's ETH (sales proceeds) to the keeper")
     p.add_argument("--to", default=None, help="keeper address (default CANVAS_OWNER)")
     p.add_argument("--reserve", default="0.01", help="ETH to leave for gas")
@@ -258,7 +286,7 @@ def main() -> None:
     else:
         {"paint": cmd_paint, "replay": cmd_replay, "serve": cmd_serve, "wallet": cmd_wallet,
          "mint": cmd_mint, "list": cmd_list, "deploy": cmd_deploy, "publish": cmd_publish,
-         "sweep": cmd_sweep}[args.cmd](args)
+         "sweep": cmd_sweep, "mint-all": cmd_mint_all}[args.cmd](args)
 
 
 if __name__ == "__main__":

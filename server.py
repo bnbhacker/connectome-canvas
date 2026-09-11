@@ -56,6 +56,13 @@ class Studio:
         self.thread = threading.Thread(target=self._run, name="studio", daemon=True)
         self.next_sitting_at: float | None = None
         self._publish_lock = threading.Lock()     # one deploy at a time; the stage dir is shared
+        from collections import deque
+        # Vercel's free plan allows 100 deployments a day, so the site is published in batches
+        self.publish_every = float(os.environ.get("CANVAS_PUBLISH_EVERY_S", "1200"))
+        self._last_publish = 0.0
+        # the free OpenSea key allows 30 writes an hour; stay under it
+        self.list_per_hour = int(os.environ.get("CANVAS_LIST_PER_HOUR", "25"))
+        self._list_posts: deque = deque()
 
     def start(self) -> None:
         self.thread.start()
@@ -88,17 +95,24 @@ class Studio:
             self.next_sitting_at = None
 
     def _after_sitting(self, piece_id: int) -> None:
-        """mint → publish → list, serialised so ids, files and nonces never race."""
+        """Every CANVAS_PUBLISH_EVERY_S: write metadata for the unminted pieces → publish the site → mint them,
+        so metadata is live before a token exists. Every sitting: list what is minted, within OpenSea's limit.
+        Serialised under one lock so ids, files and nonces never race."""
         with self._chain_lock:
-            if self.mint:
-                self._mint(piece_id)
-            if os.environ.get("CANVAS_AUTOPUBLISH", "0") == "1":
-                self._publish(piece_id)
+            autopub = os.environ.get("CANVAS_AUTOPUBLISH", "0") == "1"
+            if autopub and time.time() - self._last_publish >= self.publish_every:
+                prepared = self._prepare() if self.mint else []
+                ok = self._publish(f"batch up to sitting #{piece_id}")
+                self._last_publish = time.time()
+                if ok and prepared:
+                    self._mint_prepared(prepared)
+            elif self.mint and not autopub:
+                self._mint_prepared(self._prepare())      # metadata must then be hosted elsewhere (ipfs)
             if self.mint and self.list_eth:
                 self._list_backlog()
 
-    def _publish(self, what) -> None:
-        """Push site/ (scores, thumbnails, gallery index, live.json) to Vercel so the public site stays current."""
+    def _publish(self, what) -> bool:
+        """Push site/ (scores, thumbnails, gallery index, nft metadata, live.json) to Vercel. True on success."""
         import subprocess
         import sys
         label = f"sitting #{what}" if isinstance(what, int) else str(what)
@@ -109,24 +123,47 @@ class Studio:
                                       capture_output=True, text=True, timeout=600)
                 if proc.returncode == 0:
                     self.painter.event("publish", f"site updated · {label}")
-                else:
-                    self.painter.event("error", f"publish failed: {(proc.stderr or proc.stdout).strip()[-200:]}")
+                    return True
+                self.painter.event("error", f"publish failed: {(proc.stderr or proc.stdout).strip()[-200:]}")
             except Exception as e:
                 self.painter.event("error", f"publish failed: {type(e).__name__}: {e}")
+            return False
 
-    def _mint(self, piece_id: int) -> None:
+    def _prepare(self) -> list:
+        """Write metadata for every unminted piece under the token id it will get. Never raises."""
         try:
-            from chain.mint import mint_piece
-            self.painter.event("mint", f"minting #{piece_id} …")
-            result = mint_piece(piece_id, dry_run=False)
-            self.painter.event("mint", f"minted #{piece_id} as token {result['token_id']} · {result['tx'][:12]}…")
-        except SystemExit as e:
-            msg = str(e)
-            if "sold out" in msg:
+            from chain.mint import prepare_metadata
+            prepared = prepare_metadata()
+            if prepared:
+                self.painter.event("mint", f"metadata ready for {len(prepared)} piece(s): tokens {prepared[0][1]}–{prepared[-1][1]}")
+            return prepared
+        except BaseException as e:  # SystemExit included
+            if "sold out" in str(e):
                 self.sold_out = True
-            self.painter.event("error", f"mint failed for #{piece_id}: {msg}")
-        except Exception as e:  # the studio keeps painting whatever happens on chain
-            self.painter.event("error", f"mint failed for #{piece_id}: {type(e).__name__}: {e}")
+            self.painter.event("error", f"metadata step failed: {str(e)[:160]}")
+            return []
+
+    def _mint_prepared(self, prepared: list) -> None:
+        """Mint in order; the first failure ends the batch so ids stay aligned with the published metadata."""
+        from chain.mint import mint_piece
+        for piece_id, token_id in prepared:
+            try:
+                r = mint_piece(piece_id, dry_run=False)
+                self.painter.event("mint", f"minted sitting #{piece_id} as token {r['token_id']} · {r['tx'][:12]}…")
+                if r["token_id"] != token_id:
+                    self.painter.event("error", f"token id drifted ({r['token_id']} ≠ {token_id}); the batch stops here")
+                    break
+            except BaseException as e:  # the studio keeps painting whatever happens on chain
+                if "sold out" in str(e):
+                    self.sold_out = True
+                self.painter.event("error", f"mint failed for #{piece_id}: {str(e)[:160]}; the batch stops here")
+                break
+
+    def _list_budget(self) -> int:
+        now = time.time()
+        while self._list_posts and now - self._list_posts[0] > 3600:
+            self._list_posts.popleft()
+        return max(0, self.list_per_hour - len(self._list_posts))
 
     def _list_backlog(self, max_per_pass: int = 3) -> None:
         """List every minted-but-unlisted piece, oldest first, a few per pass; failures are retried next time."""
@@ -135,7 +172,8 @@ class Studio:
         index = self.painter._read_index()
         todo = [p for p in index if (p.get("chain") or {}).get("token_id") is not None
                 and not (p.get("chain") or {}).get("listing") and (p.get("chain") or {}).get("list_attempts", 0) < 8]
-        for p in todo[:max_per_pass]:
+        for p in todo[:min(max_per_pass, self._list_budget())]:
+            self._list_posts.append(time.time())
             try:
                 self.painter.event("list", f"listing #{p['id']} (token {p['chain']['token_id']}) at {self.list_eth} ETH …")
                 listing = list_piece(p["id"], self.list_eth)
@@ -150,6 +188,8 @@ class Studio:
                 except Exception:
                     pass
                 self.painter.event("error", f"listing #{p['id']} failed (will retry): {str(e)[:160]}")
+                if "429" in str(e):      # rate-limited: leave the rest for a later pass
+                    break
 
 
 class Tunnel:

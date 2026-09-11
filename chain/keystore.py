@@ -58,13 +58,21 @@ def new_keystore(path: Path | None = None) -> str:
     return acct.address
 
 
+_UNLOCKED: dict[str, LocalAccount] = {}
+
+
 def load_account(path: Path | None = None) -> LocalAccount:
+    """Decrypt once per process (scrypt is deliberately slow); the key never leaves memory."""
     path = path or keystore_path()
+    cached = _UNLOCKED.get(str(path))
+    if cached is not None:
+        return cached
     if not path.exists():
         raise SystemExit(f"no keystore at {path}; run `python run.py wallet new`")
     encrypted = json.loads(path.read_text(encoding="utf-8"))
-    key = Account.decrypt(encrypted, _password())
-    return Account.from_key(key)
+    acct = Account.from_key(Account.decrypt(encrypted, _password()))
+    _UNLOCKED[str(path)] = acct
+    return acct
 
 
 def show_address(path: Path | None = None) -> None:

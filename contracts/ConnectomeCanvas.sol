@@ -27,6 +27,8 @@ contract ConnectomeCanvas is ERC721, ERC2981, Ownable {
     address public painter;
     string private _baseTokenURI;
     mapping(uint256 => string) private _tokenURIOverride;
+    /// @notice Collection-level metadata (name, description, image) for marketplaces, ERC-7572.
+    string public contractURI;
 
     struct Provenance {
         bytes32 pngSha256;
@@ -39,20 +41,27 @@ contract ConnectomeCanvas is ERC721, ERC2981, Ownable {
     event Painted(uint256 indexed tokenId, address indexed to, bytes32 pngSha256, uint64 seed);
     event PainterChanged(address indexed previous, address indexed current);
     event BaseURIChanged(string baseURI);
+    event ContractURIUpdated();
 
     error NotPainter(address caller);
     error SoldOut();
 
-    constructor(address keeper, address painter_, address royaltyReceiver, uint256 maxSupply_, string memory baseURI_)
-        ERC721("Canvas Fly", "CFLY")
-        Ownable(keeper)
-    {
+    constructor(
+        address keeper,
+        address painter_,
+        address royaltyReceiver,
+        uint256 maxSupply_,
+        string memory baseURI_,
+        string memory contractURI_
+    ) ERC721("Canvas Fly", "CFLY") Ownable(keeper) {
         painter = painter_;
         maxSupply = maxSupply_;
         _baseTokenURI = baseURI_;
+        contractURI = contractURI_;
         _setDefaultRoyalty(royaltyReceiver, 500); // 5 %
         emit PainterChanged(address(0), painter_);
         emit BaseURIChanged(baseURI_);
+        emit ContractURIUpdated();
     }
 
     modifier onlyPainter() {
@@ -92,6 +101,11 @@ contract ConnectomeCanvas is ERC721, ERC2981, Ownable {
     function setBaseURI(string calldata baseURI_) external onlyOwner {
         _baseTokenURI = baseURI_;
         emit BaseURIChanged(baseURI_);
+    }
+
+    function setContractURI(string calldata uri) external onlyOwner {
+        contractURI = uri;
+        emit ContractURIUpdated();
     }
 
     /// @notice Pin one token's metadata somewhere else (e.g. IPFS) without touching the rest.

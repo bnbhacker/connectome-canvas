@@ -91,10 +91,17 @@ def save_piece(path: Path, piece: dict) -> None:
         rec_path.write_text(json.dumps(rec, indent=1), encoding="utf-8")
 
 
-def metadata_for(piece: dict, image_uri: str) -> dict:
+def metadata_for(piece: dict, image_uri: str, token_id: int | None = None) -> dict:
     swatches = ", ".join(piece.get("swatches", [])[:6])
+    extra = []
+    if piece.get("generation") is not None:
+        extra.append({"trait_type": "Generation", "display_type": "number", "value": piece["generation"]})
+    if piece.get("coverage") is not None:
+        extra.append({"trait_type": "Canvas covered (%)", "value": round(piece["coverage"] * 100, 2)})
     return {
-        "name": piece["name"],
+        "name": f"Canvas Fly #{token_id}" if token_id is not None else piece["name"],
+        "sitting": piece["id"],
+        "extra_attributes": extra,
         "description": (
             f"Painted by a real fruit-fly nervous system: {piece['neurons']:,} traced neurons of the "
             f"male Drosophila CNS connectome (Janelia FlyEM, Cambridge Connectomics, Google Research, CC-BY 4.0), "
@@ -128,14 +135,14 @@ def publish_metadata(piece: dict, png_path: Path, mode: str, token_id: int) -> t
     if mode == "ipfs":
         from .ipfs import pin_file, pin_json
         image_cid = pin_file(png_path, piece["png"])
-        meta = metadata_for(piece, f"ipfs://{image_cid}")
+        meta = _finish(metadata_for(piece, f"ipfs://{image_cid}", token_id))
         meta_cid = pin_json(meta, f"{piece['png']}.json")
         return f"ipfs://{image_cid}", f"ipfs://{meta_cid}", {"image_cid": image_cid, "metadata_cid": meta_cid}
     # site: the PNG and the JSON go where the static site serves them; /nft/<id> rewrites to /nft/<id>.json
     SITE_NFT.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(png_path, SITE_NFT / piece["png"])
     image_uri = f"{SITE_URL}/nft/{piece['png']}"
-    meta = metadata_for(piece, image_uri)
+    meta = _finish(metadata_for(piece, image_uri, token_id))
     (SITE_NFT / f"{token_id}.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     return image_uri, f"{SITE_URL}/nft/{token_id}", {"metadata_file": f"site/nft/{token_id}.json"}
 
@@ -180,7 +187,7 @@ def mint_piece(piece_id: int, dry_run: bool = True, network: str | None = None) 
 
     png_sha = bytes.fromhex(piece["png_sha256"])
     fn = contract.functions.mint(to, png_sha, int(piece["seed"]) & ((1 << 64) - 1))
-    tx_params = {"from": acct.address, "nonce": w3.eth.get_transaction_count(acct.address), "chainId": net["chain_id"]}
+    tx_params = {"from": acct.address, "nonce": w3.eth.get_transaction_count(acct.address, "pending"), "chainId": net["chain_id"]}
     if net["legacy_gas"]:
         tx_params["gasPrice"] = int(w3.eth.gas_price * 1.2)
     else:
@@ -219,3 +226,66 @@ def mint_piece(piece_id: int, dry_run: bool = True, network: str | None = None) 
     piece["chain"] = result
     save_piece(path, piece)
     return result
+
+
+def _finish(meta: dict) -> dict:
+    """Fold the optional attributes in and drop the helper keys."""
+    extra = meta.pop("extra_attributes", [])
+    sitting = meta.pop("sitting", None)
+    if sitting is not None:
+        meta["attributes"].insert(0, {"trait_type": "Sitting", "display_type": "number", "value": sitting})
+    meta["attributes"][1:1] = extra
+    return meta
+
+
+def _contract():
+    network = os.environ.get("CANVAS_NETWORK", "robinhood")
+    net = NETWORKS[network]
+    addr = os.environ.get("CANVAS_CONTRACT", "")
+    if not addr:
+        raise SystemExit("CANVAS_CONTRACT is not set")
+    w3 = Web3(Web3.HTTPProvider(net["rpc"], request_kwargs={"timeout": 60}))
+    return w3.eth.contract(address=Web3.to_checksum_address(addr), abi=ABI)
+
+
+def unminted() -> list[dict]:
+    """Every finished, non-surrogate piece without a token yet, oldest first."""
+    p = GALLERY / "index.json"
+    index = json.loads(p.read_text(encoding="utf-8")) if p.exists() else []
+    return [x for x in sorted(index, key=lambda x: x["id"])
+            if not x.get("surrogate") and (x.get("chain") or {}).get("token_id") is None]
+
+
+def prepare_metadata() -> list[tuple[int, int]]:
+    """Write site/nft/<token id>.json (+ png) for every unminted piece under the id it will receive,
+    so the metadata is live before the token exists. Returns [(sitting id, token id)]."""
+    mode = os.environ.get("CANVAS_METADATA", "site")
+    c = _contract()
+    next_id = int(c.functions.nextId().call())
+    cap = int(c.functions.maxSupply().call())
+    if next_id > cap:
+        raise SystemExit(f"sold out: {cap} tokens minted")
+    out = []
+    for k, piece in enumerate(unminted()):
+        token_id = next_id + k
+        if token_id > cap:
+            break
+        if mode == "site":
+            publish_metadata(piece, GALLERY / piece["png"], mode, token_id)
+        out.append((piece["id"], token_id))
+    return out
+
+
+def mint_backlog(ids: list[int] | None = None, on_result=None) -> list[dict]:
+    """Mint pieces in order; stop at the first failure so token ids never run ahead of their metadata."""
+    todo = [p["id"] for p in unminted()] if ids is None else list(ids)
+    done = []
+    for pid in todo:
+        try:
+            r = mint_piece(pid, dry_run=False)
+        except SystemExit as e:
+            raise SystemExit(f"stopped after {len(done)} mint(s), at sitting #{pid}: {e}")
+        done.append(r)
+        if on_result:
+            on_result(r)
+    return done

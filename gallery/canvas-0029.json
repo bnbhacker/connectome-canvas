@@ -74,6 +74,21 @@
  "graph_sha256": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8",
  "neurons": 165122,
  "edges": 10228000,
- "chain": null,
+ "chain": {
+  "network": "robinhood",
+  "contract": "0xa494Fe452526cEf4442c2A5927B3D7749841a611",
+  "token_id": 29,
+  "tx": "458ba55457f56588f8efa86b039ee62dd10d79eeb752e474b8e2370d581e2c3b",
+  "block": 60046481,
+  "owner": "0x2d20fc653dE3Cc10818381312402E46bA6f6b248",
+  "metadata_mode": "site",
+  "image": "https://connectomecanvas.com/nft/canvas-0029.png",
+  "metadata": "https://connectomecanvas.com/nft/29",
+  "metadata_file": "site/nft/29.json",
+  "explorer": "https://robinhoodchain.blockscout.com/tx/458ba55457f56588f8efa86b039ee62dd10d79eeb752e474b8e2370d581e2c3b",
+  "opensea": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/29",
+  "minted_at": 1789108294.4893146,
+  "listing": null
+ },
  "thumb": "canvas-0029.jpg"
 }

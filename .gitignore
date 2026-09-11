@@ -5,6 +5,9 @@ build/
 # the current evolved gains are committed now and then on purpose (assets/gains.npz)
 # finished pieces live in gallery/ (full PNG + provenance) and site/recordings/ (score + 512 px copy);
 # both are committed on purpose — they are the work
+# the studio's own log and stop marker
+studio.log
+studio.stop
 # never
 .env
 *.key
