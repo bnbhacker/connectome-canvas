@@ -101,7 +101,7 @@ def cmd_list(args: argparse.Namespace) -> None:
 def cmd_deploy(args: argparse.Namespace) -> None:
     from chain.deploy import deploy
     import json
-    print(json.dumps(deploy(args.network, royalty=args.royalty, dry_run=not args.live), indent=1))
+    print(json.dumps(deploy(args.network, keeper=args.keeper, royalty=args.royalty, dry_run=not args.live), indent=1))
 
 
 def cmd_publish(args: argparse.Namespace) -> None:
@@ -159,7 +159,8 @@ def main() -> None:
 
     p = sub.add_parser("deploy", help="compile with py-solc-x and deploy ConnectomeCanvas.sol")
     p.add_argument("--network", default="robinhood", choices=["robinhood", "base", "base-sepolia"])
-    p.add_argument("--royalty", default=None, help="royalty receiver (default: the painter wallet)")
+    p.add_argument("--keeper", default=None, help="owner wallet: manages the collection, gets royalties (default: CANVAS_OWNER)")
+    p.add_argument("--royalty", default=None, help="royalty receiver (default: the keeper)")
     p.add_argument("--live", action="store_true", help="broadcast; default is a dry run with a gas estimate")
 
     p = sub.add_parser("publish", help="deploy site/ to Vercel from an ASCII staging path")

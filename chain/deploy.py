@@ -83,7 +83,9 @@ def compile_contract() -> tuple[list, str]:
     return abi, bytecode
 
 
-def deploy(network: str, royalty: str | None = None, dry_run: bool = True) -> dict:
+def deploy(network: str, keeper: str | None = None, royalty: str | None = None, dry_run: bool = True) -> dict:
+    """keeper = the person's wallet (owner: manages the collection, gets royalties);
+    painter = the keystore wallet (may only mint). Both default from CANVAS_OWNER / the keystore."""
     from .keystore import load_account
     from .mint import NETWORKS
 
@@ -93,14 +95,15 @@ def deploy(network: str, royalty: str | None = None, dry_run: bool = True) -> di
 
     acct = load_account()
     painter = acct.address
-    royalty_addr = Web3.to_checksum_address(royalty) if royalty else painter
+    keeper_addr = Web3.to_checksum_address(keeper or os.environ.get("CANVAS_OWNER") or painter)
+    royalty_addr = Web3.to_checksum_address(royalty) if royalty else keeper_addr
     w3 = Web3(Web3.HTTPProvider(net["rpc"], request_kwargs={"timeout": 60}))
     if w3.eth.chain_id != net["chain_id"]:
         raise SystemExit(f"rpc is chain {w3.eth.chain_id}, expected {net['chain_id']}")
 
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
     gas_price = w3.eth.gas_price
-    tx = contract.constructor(painter, royalty_addr).build_transaction({
+    tx = contract.constructor(keeper_addr, painter, royalty_addr).build_transaction({
         "from": painter,
         "nonce": w3.eth.get_transaction_count(painter),
         "chainId": net["chain_id"],
@@ -110,10 +113,10 @@ def deploy(network: str, royalty: str | None = None, dry_run: bool = True) -> di
     tx["gas"] = int(gas * 1.15)
     cost_eth = tx["gas"] * tx["gasPrice"] / 1e18
     balance = w3.eth.get_balance(painter) / 1e18
-    print(f"network {network} (chain {net['chain_id']}) · painter {painter} · royalty → {royalty_addr}")
-    print(f"gas ≈ {gas:,} at {tx['gasPrice'] / 1e9:.4f} gwei → ≈ {cost_eth:.6f} ETH · balance {balance:.6f} ETH")
+    print(f"network {network} (chain {net['chain_id']}) · keeper/owner {keeper_addr} · painter {painter} · royalty → {royalty_addr}")
+    print(f"gas ≈ {gas:,} at {tx['gasPrice'] / 1e9:.4f} gwei → ≈ {cost_eth:.6f} ETH · painter balance {balance:.6f} ETH")
     if dry_run:
-        return {"dry_run": True, "network": network, "painter": painter, "royalty": royalty_addr,
+        return {"dry_run": True, "network": network, "keeper": keeper_addr, "painter": painter, "royalty": royalty_addr,
                 "gas": gas, "cost_eth": cost_eth, "balance_eth": balance}
     if balance < cost_eth:
         raise SystemExit("not enough ETH on the painter wallet for gas")
@@ -126,7 +129,7 @@ def deploy(network: str, royalty: str | None = None, dry_run: bool = True) -> di
         raise SystemExit(f"deploy reverted: {tx_hash.hex()}")
     address = receipt.contractAddress
     result = {
-        "network": network, "chain_id": net["chain_id"], "contract": address, "painter": painter,
+        "network": network, "chain_id": net["chain_id"], "contract": address, "keeper": keeper_addr, "painter": painter,
         "royalty": royalty_addr, "tx": tx_hash.hex(), "block": receipt.blockNumber,
         "explorer": f"{net['explorer']}/address/{address}", "deployed_at": time.time(),
     }

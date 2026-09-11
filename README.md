@@ -103,12 +103,17 @@ OpenSea indexes Robinhood Chain (chain id 4663, slug `robinhood`), and gas there
 of a cent, so the cheapest honest pipeline is: the fly paints, the painter wallet mints the token
 straight into the keeper's wallet, the keeper lists it on opensea.io with a signature.
 
+Two wallets, two roles. The **keeper** is your own wallet: it owns the contract, manages the
+collection page on OpenSea, receives royalties and the minted tokens. The **painter** is the
+studio's keystore wallet: it holds a little gas and may do exactly one thing, mint.
+
 ```bash
 python run.py wallet new                         # painter keystore at ~/.connectome-canvas/keystore.json; fund it with ~0.001 ETH on Robinhood Chain
 cd tools && npm install && cd ..                 # OpenZeppelin for the compiler (py-solc-x, no Foundry needed)
+export CANVAS_OWNER=0xYourWallet                 # the keeper
 python run.py deploy                             # dry run: compiles, estimates gas
-python run.py deploy --live                      # deploys ConnectomeCanvas on Robinhood Chain -> CANVAS_CONTRACT
-export CANVAS_CONTRACT=0x...  CANVAS_OWNER=0xYourWallet   # tokens are minted to CANVAS_OWNER
+python run.py deploy --live                      # deploys ConnectomeCanvas(keeper, painter, royalty=keeper) -> CANVAS_CONTRACT
+export CANVAS_CONTRACT=0x...                     # tokens are minted to CANVAS_OWNER
 python run.py serve --sittings 1                 # the fly paints one sitting and rests
 python run.py mint 1                             # dry run: shows the metadata
 python run.py mint 1 --live                      # writes site/nft/1.json + png, mints token 1 to CANVAS_OWNER
