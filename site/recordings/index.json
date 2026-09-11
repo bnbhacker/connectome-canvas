@@ -56,5 +56,63 @@
   "png_sha256": "e642a66cb2daf5adac41d759528ad09f81fdf8d3e3bd1091458974b9c2aeddc2",
   "synapses_changed": 75,
   "chain": null
+ },
+ {
+  "id": 3,
+  "name": "Connectome Canvas #3",
+  "png": "canvas-0003.png",
+  "thumb": "canvas-0003.jpg",
+  "seed": 4185039620,
+  "recording": "recordings/canvas-0003.json",
+  "strokes": 29,
+  "spikes": 4256034,
+  "brain_ms": 6000.0,
+  "surrogate": false,
+  "swatches": [
+   "#5bbec0",
+   "#54beba",
+   "#58babf",
+   "#56adbf",
+   "#57bcbf",
+   "#58a8bf",
+   "#56bcbf",
+   "#58bfbf",
+   "#5cc0c1",
+   "#56bbbf",
+   "#57bfbe",
+   "#5cc1c0"
+  ],
+  "png_sha256": "3708a09ec869b5d91ec6bccbbc1cfbb757870977063e763b6b80b53b1dff3f5f",
+  "synapses_changed": 0,
+  "chain": null
+ },
+ {
+  "id": 4,
+  "name": "Connectome Canvas #4",
+  "png": "canvas-0004.png",
+  "thumb": "canvas-0004.jpg",
+  "seed": 3883392808,
+  "recording": "recordings/canvas-0004.json",
+  "strokes": 24,
+  "spikes": 4032949,
+  "brain_ms": 6000.0,
+  "surrogate": false,
+  "swatches": [
+   "#38948d",
+   "#378c93",
+   "#36908e",
+   "#37918f",
+   "#389194",
+   "#368e90",
+   "#3a9891",
+   "#389095",
+   "#3b9d9a",
+   "#399794",
+   "#3b9d9d",
+   "#40aaa5"
+  ],
+  "png_sha256": "66809aef830383e44b3afd37c093161494b7211dd20df139495def8a7c65b966",
+  "synapses_changed": 0,
+  "chain": null
  }
 ]

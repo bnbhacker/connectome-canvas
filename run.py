@@ -107,19 +107,38 @@ def cmd_deploy(args: argparse.Namespace) -> None:
 
 def cmd_publish(args: argparse.Namespace) -> None:
     """Copy site/ to an ASCII path (Vercel chokes on non-ASCII paths on Windows) and deploy it."""
+    import json
     import shutil
     import subprocess
     import tempfile
-    stage = Path(args.stage) if args.stage else Path(tempfile.gettempdir()) / "cc-site"
+    # Vercel's CLI silently fails to deploy from paths with non-ASCII characters on Windows,
+    # and the user's temp dir may live under such a profile — so pick an ASCII stage.
+    if args.stage:
+        stage = Path(args.stage)
+    else:
+        tmp = Path(tempfile.gettempdir())
+        stage = (tmp if str(tmp).isascii() else Path("C:/Users/Public" if sys.platform == "win32" else "/tmp")) / "cc-site"
+    link = stage / ".vercel" / "project.json"
+    saved_link = link.read_text(encoding="utf-8") if link.exists() else None
     if stage.exists():
         shutil.rmtree(stage)
     shutil.copytree(ROOT / "site", stage)
+    if saved_link:                       # keep the project link so --yes never guesses
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.write_text(saved_link, encoding="utf-8")
     print(f"staged site/ -> {stage}")
     cmd = ["vercel", "--prod", "--yes", "--name", "connectome-canvas"]
     if args.scope:
         cmd += ["--scope", args.scope]
     print(" ".join(cmd))
-    subprocess.run(cmd, cwd=stage, shell=(sys.platform == "win32"), check=False)
+    proc = subprocess.run(cmd, cwd=stage, shell=(sys.platform == "win32"), capture_output=True, text=True)
+    tail = (proc.stdout + proc.stderr).strip().splitlines()[-6:]
+    print("\n".join(tail))
+    if proc.returncode != 0:
+        raise SystemExit(f"vercel exited with {proc.returncode}")
+    ok = any("Ready" in line or "ready" in line or "https://" in line for line in tail)
+    if not ok:
+        raise SystemExit("vercel produced no deployment URL")
 
 
 def main() -> None:

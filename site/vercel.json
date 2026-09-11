@@ -7,7 +7,7 @@
     { "source": "/gallery/:path*", "destination": "https://studio.connectomecanvas.com/gallery/:path*" }
   ],
   "headers": [
-    { "source": "/recordings/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] },
-    { "source": "/(.*)\\.(css|js)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }] }
+    { "source": "/recordings/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] },
+    { "source": "/nft/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
   ]
 }
