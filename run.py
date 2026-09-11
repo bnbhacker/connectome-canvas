@@ -120,8 +120,16 @@ def cmd_publish(args: argparse.Namespace) -> None:
         stage = (tmp if str(tmp).isascii() else Path("C:/Users/Public" if sys.platform == "win32" else "/tmp")) / "cc-site"
     link = stage / ".vercel" / "project.json"
     saved_link = link.read_text(encoding="utf-8") if link.exists() else None
-    if stage.exists():
-        shutil.rmtree(stage)
+    import time
+    for attempt in range(5):                     # Windows may still hold a handle from the previous deploy
+        try:
+            if stage.exists():
+                shutil.rmtree(stage)
+            break
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(2.0)
     shutil.copytree(ROOT / "site", stage)
     if saved_link:                       # keep the project link so --yes never guesses
         link.parent.mkdir(parents=True, exist_ok=True)

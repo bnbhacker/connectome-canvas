@@ -143,5 +143,34 @@
   "png_sha256": "1c5d0bad49a9cfb0cc2295e3a7d81220dac42175268692c2e53ab17e7fba7c3b",
   "synapses_changed": 2,
   "chain": null
+ },
+ {
+  "id": 6,
+  "name": "Canvas Fly #6",
+  "png": "canvas-0006.png",
+  "thumb": "canvas-0006.jpg",
+  "seed": 4281294126,
+  "recording": "recordings/canvas-0006.json",
+  "strokes": 25,
+  "spikes": 3653187,
+  "brain_ms": 6000.0,
+  "surrogate": false,
+  "swatches": [
+   "#61c3c2",
+   "#61c3c0",
+   "#5fc2bf",
+   "#5fc2c2",
+   "#62c3bf",
+   "#5dc1c0",
+   "#5ebdc2",
+   "#5abfc0",
+   "#59b6c0",
+   "#4bbab7",
+   "#53bdb7",
+   "#53bdbc"
+  ],
+  "png_sha256": "330f1006b64fcb134ac8982ca32b7a4cf0880f854fedcca138d496ce074c3f16",
+  "synapses_changed": 0,
+  "chain": null
  }
 ]

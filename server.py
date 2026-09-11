@@ -53,6 +53,7 @@ class Studio:
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self._run, name="studio", daemon=True)
         self.next_sitting_at: float | None = None
+        self._publish_lock = threading.Lock()     # one deploy at a time; the stage dir is shared
 
     def start(self) -> None:
         self.thread.start()
@@ -87,16 +88,17 @@ class Studio:
         import subprocess
         import sys
         label = f"sitting #{what}" if isinstance(what, int) else str(what)
-        try:
-            self.painter.event("publish", f"publishing {label} to the site …")
-            proc = subprocess.run([sys.executable, str(ROOT / "run.py"), "publish"], cwd=ROOT,
-                                  capture_output=True, text=True, timeout=600)
-            if proc.returncode == 0:
-                self.painter.event("publish", f"site updated · {label}")
-            else:
-                self.painter.event("error", f"publish failed: {(proc.stderr or proc.stdout).strip()[-200:]}")
-        except Exception as e:
-            self.painter.event("error", f"publish failed: {type(e).__name__}: {e}")
+        with self._publish_lock:
+            try:
+                self.painter.event("publish", f"publishing {label} to the site …")
+                proc = subprocess.run([sys.executable, str(ROOT / "run.py"), "publish"], cwd=ROOT,
+                                      capture_output=True, text=True, timeout=600)
+                if proc.returncode == 0:
+                    self.painter.event("publish", f"site updated · {label}")
+                else:
+                    self.painter.event("error", f"publish failed: {(proc.stderr or proc.stdout).strip()[-200:]}")
+            except Exception as e:
+                self.painter.event("error", f"publish failed: {type(e).__name__}: {e}")
 
     def _mint(self, piece_id: int) -> None:
         try:
@@ -146,7 +148,8 @@ class Tunnel:
         assert self.proc and self.proc.stdout
         for line in self.proc.stdout:
             m = self.URL_RE.search(line)
-            if m and not self.url:
+            # cloudflared also logs its own API endpoint (api.trycloudflare.com); the tunnel is the other one
+            if m and not self.url and not m.group(0).startswith("https://api."):
                 self.url = m.group(0)
                 try:
                     self.on_ready(self.url)
