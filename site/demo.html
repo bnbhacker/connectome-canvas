@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demonstration — Connectome Canvas</title>
+<meta name="description" content="Watch a recorded sitting: the fly's cursor paints a picture stroke by stroke, replayed from the score the brain wrote. No live feed needed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="strip">
+  <span>DEMONSTRATION <b>RECORDED SITTING</b></span>
+  <span>PIECE <b id="s-piece">—</b></span>
+  <span>SEED <b id="s-seed">—</b></span>
+  <span>WINDOW <b id="s-win">—</b></span>
+  <span id="s-status" class="between">paused</span>
+  <span class="right"><b id="s-src">—</b></span>
+</div>
+<nav class="nav"></nav>
+<div class="surrogate-banner">this recording was made on a surrogate graph — a random network, not the connectome</div>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <p class="kicker">How to watch a brain paint without a live feed</p>
+      <h1 class="title">The sitting, <em>replayed.</em></h1>
+      <p class="lede">While the brain runs, every window of brain time is written to a <b>score</b>: where the brush went, whether it was
+        down, what colour it left, which descending neurons fired and how hard. This page plays that score back. The picture
+        redraws stroke by stroke in your browser, the cursor is the fly, and the panels show what the brain was doing at that
+        moment — <b>no server, no stream, no video.</b> Because the simulation is seeded, anyone with the graph can re-run the
+        seed and get the same pixels.</p>
+
+      <div class="stage" id="stage">
+        <canvas id="cv" width="1024" height="1024"></canvas>
+        <div class="cursor" id="cursor"></div>
+        <div class="tag">replay · <span id="t-name">—</span></div>
+        <div class="tag br" id="t-colour">—</div>
+        <div class="tag bl" id="t-brush">—</div>
+        <div class="eye"><canvas id="eye" width="120" height="120"></canvas></div>
+        <div class="tag rb">the fly's eye · sampled from the replay</div>
+      </div>
+
+      <input class="scrub" type="range" id="scrub" min="0" max="1" value="0" step="1">
+      <div class="controls">
+        <button class="btn" id="play">▶ play</button>
+        <button class="btn ghost" id="restart">↺ restart</button>
+        <label class="t">speed <input type="range" id="speed" min="2" max="200" value="40"> <span id="speed-v">40</span> windows/s</label>
+        <span class="t" id="t-progress">window 0 / 0 · 0.00 s brain time</span>
+      </div>
+      <div class="controls">
+        <label class="t">recording <select id="pick"></select></label>
+        <span class="t" id="pick-note"></span>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+
+    <div>
+      <div class="tiles">
+        <div class="tile spike"><div class="k">neurons firing</div><div class="v tabular" id="v-firing">—</div><div class="u">this window</div></div>
+        <div class="tile spike"><div class="k">spikes so far</div><div class="v tabular" id="v-spikes">—</div><div class="u"><span id="v-win-spikes">—</span> this window</div></div>
+        <div class="tile accent"><div class="k">strokes</div><div class="v tabular" id="v-strokes">—</div><div class="u"><span id="v-lifts">—</span> lifts · <span id="v-rev">—</span> reversals</div></div>
+        <div class="tile"><div class="k">brain time</div><div class="v tabular" id="v-bt">—</div><div class="u">seconds · gain <span id="v-gain">—</span></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><b>neural activity</b> recorded firing · soma positions <span class="r" id="scatter-note">—</span></div>
+        <canvas class="scatter" id="scatter"></canvas>
+        <div class="legend">
+          <span><i style="background:#4fb7c4"></i>optic lobe</span><span><i style="background:#b06fd6"></i>central brain</span>
+          <span><i style="background:#d9a441"></i>VNC</span><span><i style="background:#f0b35a"></i>descending</span><span><i style="background:#8de08a"></i>Kenyon cells</span>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="ph"><b>descending neurons → brush</b> spikes per second <span class="r" id="cmd-line">—</span></div>
+        <div class="bars">
+          <div class="bar pair"><span class="n">DNa02 L | R</span><div class="t"><div class="f l" id="b-l"></div><div class="f r" id="b-r"></div></div><span class="hz"><span id="h-l">0</span><small> | </small><span id="h-r">0</span></span></div>
+          <div class="bar"><span class="n">DNa01 fwd</span><div class="t"><div class="f" id="b-fwd"></div></div><span class="hz" id="h-fwd">0</span></div>
+          <div class="bar"><span class="n">MDN back</span><div class="t"><div class="f mdn" id="b-mdn"></div></div><span class="hz" id="h-mdn">0</span></div>
+          <div class="bar"><span class="n">DNp09 stop</span><div class="t"><div class="f stop" id="b-stop"></div></div><span class="hz" id="h-stop">0</span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="ph"><b>palette so far</b></div>
+        <div class="colour-now"><div class="chip" id="chip"></div><div class="mix">current colour <b id="m-hex">—</b><br>read off which populations carried the spikes</div></div>
+        <div class="swatches" id="swatches"></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="ph"><b>provenance</b> <span class="r">check it yourself</span></div>
+        <div class="contract" id="prov">
+          <span class="k">piece</span><span class="v" id="p-name">—</span>
+          <span class="k">seed</span><span class="v" id="p-seed">—</span>
+          <span class="k">png sha256</span><span class="v" id="p-sha">—</span>
+          <span class="k">graph sha256</span><span class="v" id="p-graph">—</span>
+          <span class="k">dataset</span><span class="v" id="p-dataset">—</span>
+          <span class="k">replay</span><span class="v"><code id="p-cmd">python run.py replay N</code></span>
+          <span class="k">on chain</span><span class="v" id="p-chain">not minted</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="kicker" style="margin-top:56px">Why a score and not a video</p>
+  <h2 class="sec" style="margin-top:0">A recording you can audit</h2>
+  <div class="cards">
+    <div class="card"><div class="h">it is the data, not a picture of it</div><p>A video shows a cursor moving. A score says <b>which neurons fired</b> at each window, at what rate, and what the brush did about it. The panels here are read from the same numbers that moved the brush.</p></div>
+    <div class="card"><div class="h">it is small and static</div><p>A whole sitting is a few hundred kilobytes of JSON. It plays from any static host, on a phone, with the server off. The gallery keeps one per piece.</p></div>
+    <div class="card"><div class="h">it is reproducible</div><p>The header carries the seed and the SHA-256 of the graph. <code>python run.py replay N</code> re-runs the brain and compares the PNG hash. Same graph, same seed, same pixels — or it says so.</p></div>
+  </div>
+</main>
+
+<footer>
+  Connectome data © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, CC-BY 4.0. Simulation after Shiu et al. 2024.
+  Connectome Canvas is an art experiment, not an investment. · <a href="https://github.com/bnbhacker/connectome-canvas">source</a>
+</footer>
+
+<script src="common.js"></script>
+<script src="replay.js"></script>
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+  const stage = $("stage"), cursor = $("cursor");
+  cursor.innerHTML = CC.flySVG();
+  let scatter = null, swatches = [], lastSw = null;
+
+  const rp = Replay({
+    canvas: $("cv"), eyeCanvas: $("eye"), cursorEl: cursor, stageEl: stage,
+    onTick(s) {
+      const t = s.t;
+      $("t-progress").textContent = `window ${s.i} / ${s.n} · ${(s.brainMs / 1000).toFixed(2)} s brain time`;
+      $("scrub").max = s.n; $("scrub").value = s.i;
+      $("s-win").textContent = `${s.i} / ${s.n}`;
+      $("v-strokes").textContent = s.strokes; $("v-lifts").textContent = s.lifts; $("v-rev").textContent = s.reversals;
+      $("v-spikes").textContent = CC.fmt(s.spikes); $("v-bt").textContent = (s.brainMs / 1000).toFixed(2);
+      if (!t) return;
+      $("v-firing").textContent = CC.fmt(t[7]); $("v-win-spikes").textContent = CC.fmt(t[6]);
+      $("v-gain").textContent = t[14] != null ? t[14].toFixed(3) : "—";
+      const l = t[8], r = t[9], pm = Math.max(10, l + r);
+      $("b-l").style.width = (l / pm * 50) + "%"; $("b-r").style.width = (r / pm * 50) + "%";
+      $("h-l").textContent = l.toFixed(0); $("h-r").textContent = r.toFixed(0);
+      $("b-fwd").style.width = Math.min(100, t[10] / 120 * 100) + "%"; $("h-fwd").textContent = t[10].toFixed(0);
+      $("b-mdn").style.width = Math.min(100, t[11] / 120 * 100) + "%"; $("h-mdn").textContent = t[11].toFixed(0);
+      $("b-stop").style.width = Math.min(100, t[12] / 120 * 100) + "%"; $("h-stop").textContent = t[12].toFixed(0);
+      const turn = (r - l) / ((l + r) || 1);
+      $("cmd-line").textContent = `turn ${turn >= 0 ? "+" : ""}${turn.toFixed(2)} · ${t[3] ? "reverse" : "forward"} · brush ${t[2] ? "up" : "down"}`;
+      $("chip").style.background = t[5]; $("m-hex").textContent = t[5]; $("t-colour").textContent = t[5];
+      $("t-brush").textContent = `brush ${t[2] ? "up" : "down"} · ${t[4]} px · (${Math.round(t[0])}, ${Math.round(t[1])})`;
+      if (!t[2] && t[5] !== lastSw) { lastSw = t[5]; swatches.push(t[5]); if (swatches.length > 48) swatches.shift(); $("swatches").innerHTML = swatches.map(c => `<i style="background:${c}"></i>`).join(""); }
+      if (scatter) scatter.fire(t[13]);
+    },
+    onEnd() { $("play").textContent = "▶ play again"; $("s-status").textContent = "finished"; $("s-status").className = "between"; },
+  });
+
+  $("play").onclick = () => { const p = rp.toggle(); $("play").textContent = p ? "❚❚ pause" : "▶ play"; $("s-status").textContent = p ? "replaying" : "paused"; $("s-status").className = p ? "live" : "between"; };
+  $("restart").onclick = () => { swatches = []; lastSw = null; $("swatches").innerHTML = ""; rp.restart(); $("play").textContent = "❚❚ pause"; $("s-status").textContent = "replaying"; $("s-status").className = "live"; };
+  $("speed").oninput = e => { rp.setSpeed(+e.target.value); $("speed-v").textContent = e.target.value; };
+  $("scrub").oninput = e => { swatches = []; lastSw = null; rp.seek(+e.target.value); };
+
+  async function getJSON(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }
+
+  let index = [];
+  try { index = await getJSON("recordings/index.json"); } catch (e) {}
+  index.sort((a, b) => b.id - a.id);
+  if (!index.length) {
+    $("pick-note").textContent = "no recordings yet — run `python run.py paint` once and reload";
+    return;
+  }
+  const pick = $("pick");
+  pick.innerHTML = index.map(p => `<option value="${p.id}">${CC.esc(p.name)} · ${p.strokes} strokes · seed ${p.seed}${p.surrogate ? " · surrogate" : ""}</option>`).join("");
+  $("thumbs").innerHTML = index.slice(0, 12).map(p => `<img data-id="${p.id}" src="${p.thumb ? "recordings/" + p.thumb : "../gallery/" + p.png}" title="${CC.esc(p.name)}" alt="">`).join("");
+  $("thumbs").onclick = e => { const id = e.target?.dataset?.id; if (id) { pick.value = id; load(+id); } };
+  pick.onchange = () => load(+pick.value);
+
+  async function load(id) {
+    const p = index.find(x => x.id === id) || index[0];
+    $("pick-note").textContent = "loading…";
+    const score = await getJSON(p.recording.startsWith("recordings/") ? p.recording : "recordings/" + p.recording.split("/").pop());
+    document.body.classList.toggle("surrogate", !!score.piece.surrogate);
+    swatches = []; lastSw = null; $("swatches").innerHTML = "";
+    rp.load(score);
+    rp.setSpeed(+$("speed").value);
+    const pc = score.piece;
+    $("t-name").textContent = pc.name; $("s-piece").textContent = "#" + pc.id; $("s-seed").textContent = pc.seed;
+    $("s-src").textContent = pc.surrogate ? "SURROGATE GRAPH" : "MALE CNS V1.0";
+    $("p-name").textContent = pc.name; $("p-seed").textContent = pc.seed; $("p-sha").textContent = pc.png_sha256;
+    $("p-graph").textContent = pc.graph_sha256 || "—"; $("p-dataset").textContent = pc.dataset; $("p-cmd").textContent = `python run.py replay ${pc.id}`;
+    const ch = pc.chain;
+    $("p-chain").innerHTML = ch && ch.token_id != null ? `token ${ch.token_id} · <a href="${ch.opensea}" target="_blank" rel="noopener">opensea ↗</a> · <a href="${ch.explorer}" target="_blank" rel="noopener">tx ↗</a>` : (pc.surrogate ? "surrogate — never minted" : "not minted yet");
+    [...$("thumbs").children].forEach(img => img.classList.toggle("on", +img.dataset.id === pc.id));
+    if (!scatter) { scatter = CC.Scatter($("scatter"), score.neurons); $("scatter-note").textContent = `${CC.fmt(score.neurons.xyz.length)} sampled · ${score.ticks.length} windows recorded`; }
+    $("pick-note").textContent = `${(score.ticks.length * score.tick_ms / 1000).toFixed(1)} s of brain time in ${score.ticks.length} windows`;
+    location.hash = pc.id;
+    $("play").textContent = "❚❚ pause"; $("s-status").textContent = "replaying"; $("s-status").className = "live";
+    rp.play();
+  }
+
+  const want = parseInt(location.hash.slice(1), 10);
+  const first = index.find(p => p.id === want) || index[0];
+  pick.value = first.id;
+  load(first.id);
+})();
+</script>
+</body>
+</html>

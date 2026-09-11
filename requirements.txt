@@ -1,0 +1,13 @@
+# What the fly needs. Versions are the ones it has been run against (Python 3.12).
+numpy==2.4.2
+scipy==1.17.1
+pandas==3.0.1
+pyarrow==23.0.1          # reads the .feather release files
+Pillow==12.3.0           # the canvas
+requests==2.34.2
+
+fastapi==0.128.0
+uvicorn[standard]==0.40.0
+
+web3==7.16.0             # mint on Base
+eth-account==0.13.7      # encrypted keystore, signing

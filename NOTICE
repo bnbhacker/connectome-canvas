@@ -1,0 +1,22 @@
+Connectome Canvas
+=================
+
+The code in this repository is MIT licensed — see LICENSE. That licence covers
+the code and nothing else.
+
+The connectome is not ours to license. The male Drosophila CNS connectome v1.0
+is © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research,
+released under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/), and it
+stays under CC-BY wherever it goes. `python run.py fetch` downloads it from the
+public bucket gs://flyem-male-cns; nothing from it is redistributed here. If you
+fork this, keep that attribution — it is the whole reason any of this is real.
+
+The neuron model follows Shiu et al. 2024 (Nature) and the retinotopic drive is
+argued for by Lappalainen et al. 2024 (Nature). Wiring this connectome to a
+cursor through the descending neurons DNa02 / DNa01 / MDN / DNp09 was done first
+and openly by the flybrain project (MIT); Connectome Canvas is an independent
+implementation that points the same anatomy at a canvas.
+
+Paintings produced by this software are hashed and, when minted, those hashes
+and seeds are recorded on chain. Connectome Canvas is an art experiment, not an
+investment, and nothing here is financial advice.

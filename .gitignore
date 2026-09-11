@@ -1,0 +1,22 @@
+# the connectome itself: 540 MB of CC-BY feather files, fetched with `python run.py fetch`
+data/
+# the built graph (38 MB) — rebuild it, don't commit it
+build/
+# finished pieces live in gallery/ (full PNG + provenance) and site/recordings/ (score + 512 px copy);
+# both are committed on purpose — they are the work
+# never
+.env
+*.key
+keystore*.json
+# python / node
+__pycache__/
+*.pyc
+.venv/
+venv/
+tools/node_modules/
+tools/package-lock.json
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

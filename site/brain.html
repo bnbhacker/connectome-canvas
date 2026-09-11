@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The brain — Connectome Canvas</title>
+<meta name="description" content="What runs under Connectome Canvas: the male Drosophila CNS connectome as a spiking network, how it sees, how it moves the brush, what is and is not real.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="strip">
+  <span>SPECIMEN <b>MALE CNS V1.0</b></span>
+  <span><b id="s-neurons">165,122</b> NEURONS</span>
+  <span><b id="s-edges">10,228,000</b> CONNECTIONS</span>
+  <span><b id="s-syn">104,213,656</b> SYNAPSES</span>
+  <span class="right"><b>CC-BY 4.0</b> JANELIA FLYEM · CAMBRIDGE · GOOGLE RESEARCH</span>
+</div>
+<nav class="nav"></nav>
+
+<main class="wrap">
+  <p class="kicker">The brain</p>
+  <h1 class="title" style="font-size:46px">What is actually <em>running.</em></h1>
+  <p class="lede">This page is the part of the site you should read before believing the rest of it. It says where the wiring comes from,
+    how the wiring becomes activity, how the activity becomes a brush stroke, and which parts of that chain are measured
+    biology and which are choices somebody made.</p>
+
+  <div class="tiles" style="margin-top:22px">
+    <div class="tile"><div class="k">neurons</div><div class="v tabular" id="i-neurons">165,122</div><div class="u">status = Traced, glia removed</div></div>
+    <div class="tile"><div class="k">signed connections</div><div class="v tabular" id="i-edges">10,228,000</div><div class="u">pairs with ≥ 3 synapses</div></div>
+    <div class="tile"><div class="k">retina columns</div><div class="v tabular" id="i-cols">892</div><div class="u">L1 <span id="i-l1">892</span> · L2 <span id="i-l2">893</span> · map: <span id="i-layout">hex columns</span></div></div>
+    <div class="tile"><div class="k">KC → MBON synapses</div><div class="v tabular" id="i-mb">—</div><div class="u">reward-side <span id="i-rew">—</span> · punish-side <span id="i-pun">—</span></div></div>
+  </div>
+
+  <p class="kicker" style="margin-top:48px">01 · the wiring</p>
+  <h2 class="sec" style="margin-top:0">A connectome is anatomy, not activity</h2>
+  <div class="prose">
+    <p>In September 2026 HHMI Janelia's FlyEM team, the Cambridge Connectomics Group and Google Research published the complete central
+      nervous system of an adult male fruit fly: brain, both optic lobes and ventral nerve cord, imaged by electron microscopy at
+      nanometre resolution and reconstructed with flood-filling networks, then proofread by people. It tells you every wire. It tells you
+      nothing about what the brain is doing — the release makes no functional claim, and neither does this page.</p>
+    <p>We read three flat files from the public bucket: the pre→post synapse counts (traced bodies only), the per-body annotations
+      (type, superclass, side, soma position, and for the optic lobe the hex column each cell belongs to), and the per-body predicted
+      neurotransmitter. <code>run.py build</code> keeps the <b>165,122 neurons whose status is Traced</b>, drops pairs with fewer than three
+      synapses as reconstruction noise, and writes one signed sparse matrix. Acetylcholine gets +1, GABA and glutamate −1, monoamines 0
+      rather than a made-up sign. That matrix is the fly.</p>
+  </div>
+
+  <p class="kicker" style="margin-top:48px">02 · the activity</p>
+  <h2 class="sec" style="margin-top:0">Leaky integrate-and-fire, after Shiu et al. 2024</h2>
+  <div class="prose">
+    <p>Every neuron is the same simple unit: rest −52 mV, threshold −45 mV, membrane time constant 20 ms, 2.2 ms refractory period,
+      0.2 ms steps. When a neuron spikes, each of its targets receives <b>sign × synapse count × 0.275 mV</b>. Those numbers are the ones
+      that reproduced sugar-evoked proboscis extension from the female connectome alone; we did not tune them.</p>
+    <p>Two things are added that the anatomy does not contain, and both are logged. <b>Background noise:</b> each step, 0.1 % of neurons
+      receive a 2 mV kick, drawn from a seeded generator, so the network never goes silent and the run replays identically.
+      <b>One global gain:</b> LIF units have none of the adaptation and gain control real neurons have, and under steady retinal input the
+      released weights alone drive the whole network into a seizure within milliseconds. A single scalar multiplies every synapse, and a
+      slow controller nudges it to hold the population between 2 and 8 Hz on average. Its value is recorded with every window and every piece.
+      Per-cell-type gains exist as a knob and are all 1.0 today.</p>
+  </div>
+
+  <p class="kicker" style="margin-top:48px">03 · the eye</p>
+  <h2 class="sec" style="margin-top:0">892 columns look at the canvas</h2>
+  <div class="cards">
+    <div class="card"><div class="h">what it sees</div><p>A 256 px patch of the canvas centred on the brush. Luminance only — a fly's lamina is a luminance map, which is why the paper is dark and the paint is light.</p></div>
+    <div class="card"><div class="h">where it goes</div><p>Each column drives one L1 cell (ON: brighter than a moment ago, or than the mean) and one L2 cell (OFF). L1 and L2 are the lamina monopolar cells directly behind photoreceptors R1–R6.</p></div>
+    <div class="card"><div class="h">how the map is made</div><p>The release assigns every columnar optic-lobe neuron a hex column (<code>assignedOlHex1/2</code>). Our 892-column lattice is matched to those coordinates for one eye, so retinotopy is the fly's own, not a projection we invented.</p></div>
+  </div>
+
+  <p class="kicker" style="margin-top:48px">04 · the hands</p>
+  <h2 class="sec" style="margin-top:0">Descending neurons, read as a brush</h2>
+  <div class="honest">
+    <div class="row"><b>DNa02 · left vs right</b><span>A fly steers by the asymmetry between the pair. (R − L) / (R + L) turns the heading, up to 0.55 rad per window.</span></div>
+    <div class="row"><b>DNa01 · forward</b><span>Forward walking. Its rate sets the step (2.5 to 28 px per window) and the stroke width (2 to 16 px).</span></div>
+    <div class="row"><b>MDN · backwards</b><span>The moonwalker descending neuron makes a fly walk backwards. Above 20 Hz and louder than DNa01, the brush reverses.</span></div>
+    <div class="row"><b>DNp09 · stop</b><span>A fly freezes when it fires. Above 15 Hz and louder than half of DNa01, the brush lifts and the stroke breaks.</span></div>
+    <div class="row"><b>Colour</b><span>Hue from the optic / central / VNC mix of the window's spikes, saturation from the Kenyon-cell share, lightness from rate. Fixed, public, and not something a fly has.</span></div>
+  </div>
+
+  <p class="kicker" style="margin-top:48px">05 · learning</p>
+  <h2 class="sec" style="margin-top:0">The one place a weight moves</h2>
+  <div class="prose">
+    <p>In a fly, learning happens at the Kenyon cell → MBON synapse under dopamine, and it is subtraction: a Kenyon cell active shortly before
+      a dopaminergic neuron fires has that synapse depressed. We implement exactly that — depression with a floor and a slow drift back for
+      forgetting, no potentiation. Which MBONs are reward-side and which punishment-side is decided by comparing each MBON's total PAM input
+      with its total PPL1 input in the released wiring, not by a table.</p>
+    <p>The dopamine signal is where a person steps in: fresh canvas is the reward, hitting the edge is the punishment. A fly is rewarded by
+      sugar. This is the mechanism a fly uses, pointed at a thing a fly would never care about.</p>
+  </div>
+
+  <p class="kicker" style="margin-top:48px">06 · provenance</p>
+  <h2 class="sec" style="margin-top:0">Replay it, don't trust it</h2>
+  <div class="prose">
+    <p>Every sitting starts from a 32-bit seed. The seed decides the brush's starting point and the background noise; everything else is
+      the anatomy. The finished PNG is hashed, and the hash and the seed are written to the chain next to the token by
+      <code>mint(to, uri, pngSha256, seed)</code>. With the same <code>graph.npz</code> (its SHA-256 is in every piece) the command below
+      re-runs the sitting and reports whether the pixels match.</p>
+    <pre style="background:var(--ink-2);border:1px solid var(--line);padding:12px 14px;border-radius:4px;color:var(--paper-dim)">git clone https://github.com/bnbhacker/connectome-canvas && cd connectome-canvas
+pip install -r requirements.txt
+python run.py fetch        # ~540 MB from storage.googleapis.com/flyem-male-cns, no account
+python run.py build        # -> build/graph.npz, 165,122 neurons
+python run.py replay 12    # MATCH or DIFFERENT, with both hashes</pre>
+  </div>
+
+  <p class="kicker" style="margin-top:48px">Sources</p>
+  <h2 class="sec" style="margin-top:0">Credit where the wiring came from</h2>
+  <div class="prose">
+    <p><b>Data.</b> Male CNS connectome v1.0 — HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, CC-BY 4.0,
+      <a href="https://storage.googleapis.com/flyem-male-cns/" target="_blank" rel="noopener">gs://flyem-male-cns</a>.</p>
+    <p><b>Model.</b> Shiu, P. K. et al. "A Drosophila computational brain model reveals sensorimotor processing." <i>Nature</i> 2024 — the LIF parameters and the 0.275 mV per synapse.
+      Lappalainen, J. K. et al. "Connectome-constrained networks predict neural activity across the fly visual system." <i>Nature</i> 2024 — the case for driving the optic lobe with real retinotopy.</p>
+    <p><b>Precedent.</b> The idea of wiring this connectome to a cursor through DNa02 / DNa01 / MDN / DNp09 was done first, and openly, by flybrain (MIT). Connectome Canvas is a separate implementation that points the same anatomy at a canvas instead of a launchpad.</p>
+    <p>Not affiliated with any of the above. Connectome Canvas is an art experiment, not an investment.</p>
+  </div>
+</main>
+
+<footer>
+  Connectome data © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, CC-BY 4.0.
+  · <a href="https://github.com/bnbhacker/connectome-canvas">source</a>
+</footer>
+
+<script src="common.js"></script>
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+  try {
+    const r = await fetch("api/info", { cache: "no-store" }); if (!r.ok) return;
+    const i = await r.json();
+    $("s-neurons").textContent = CC.fmt(i.neurons); $("s-edges").textContent = CC.fmt(i.edges); $("s-syn").textContent = CC.fmt(i.synapses);
+    $("i-neurons").textContent = CC.fmt(i.neurons); $("i-edges").textContent = CC.fmt(i.edges);
+    $("i-cols").textContent = i.retina.columns; $("i-l1").textContent = i.retina.l1; $("i-l2").textContent = i.retina.l2; $("i-layout").textContent = i.retina.layout;
+    $("i-mb").textContent = CC.fmt(i.mushroom.synapses); $("i-rew").textContent = CC.fmt(i.mushroom.reward_side); $("i-pun").textContent = CC.fmt(i.mushroom.punish_side);
+    if (i.surrogate) document.body.classList.add("surrogate");
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

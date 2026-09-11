@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connectome Canvas — a fly brain that paints</title>
+<meta name="description" content="A real fruit-fly nervous system — 165,122 traced neurons of the male Drosophila connectome — paints on a canvas. Every finished sitting is minted on Base and listed on OpenSea.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%230a0a0d'/%3E%3Cellipse cx='15' cy='16' rx='8' ry='4.5' fill='%23f0b35a'/%3E%3Ccircle cx='23' cy='16' r='3' fill='%231a1a1f' stroke='%23f0b35a'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<div class="strip">
+  <span>SPECIMEN <b id="s-dataset">MALE CNS V1.0</b></span>
+  <span><b id="s-neurons">—</b> NEURONS</span>
+  <span><b id="s-edges">—</b> CONNECTIONS</span>
+  <span>SITTING <b id="s-sitting">—</b></span>
+  <span>BRAIN TIME <b id="s-brainms">—</b></span>
+  <span id="s-status" class="between">connecting</span>
+  <span class="right"><b id="s-clock">—</b> UTC</span>
+</div>
+<nav class="nav"></nav>
+<div class="surrogate-banner">surrogate graph loaded — a random network, not the connectome · nothing painted here is minted</div>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <p class="kicker">Connectome Canvas · one token per sitting · Base</p>
+      <h1 class="title">A real fly brain <em>paints.</em><br>The paintings are minted.</h1>
+      <p class="lede">Every connection in this thing was traced from electron microscope images of an actual male fruit fly.
+        <b>165,122 neurons</b> integrate, the <b>descending neurons a fly walks with</b> move a brush, and the shape of the
+        activity picks the colour. The fly paints what it sees and sees what it paints. When a sitting ends the picture is
+        hashed, minted on Base and listed on OpenSea. Nobody draws.</p>
+
+      <div class="stage idle" id="stage">
+        <img id="frame" alt="the live canvas" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">
+        <div class="cursor" id="cursor"></div>
+        <div class="tag">live canvas · sitting <span id="t-sitting">—</span></div>
+        <div class="tag br" id="t-colour">—</div>
+        <div class="tag bl" id="t-brush">brush —</div>
+        <div class="eye"><img id="eye" alt="what the retina sees"></div>
+        <div class="tag rb">the fly's eye · 892 columns</div>
+        <div class="between"><span id="between-text">between sittings</span><span id="next-in"></span></div>
+      </div>
+      <div class="controls">
+        <a class="btn ghost" href="demo.html">watch a recorded sitting</a>
+        <a class="btn ghost" href="gallery.html">the gallery</a>
+        <span class="t" id="offline-note"></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="tiles">
+        <div class="tile spike"><div class="k">neurons firing</div><div class="v tabular" id="v-firing">—</div><div class="u">of <span id="v-n">—</span> · this window</div></div>
+        <div class="tile spike"><div class="k">spikes / s</div><div class="v tabular" id="v-sps">—</div><div class="u">membrane <span id="v-mem">—</span> mV</div></div>
+        <div class="tile accent"><div class="k">strokes</div><div class="v tabular" id="v-strokes">—</div><div class="u"><span id="v-lifts">—</span> lifts · <span id="v-rev">—</span> reversals</div></div>
+        <div class="tile"><div class="k">brain time</div><div class="v tabular" id="v-bt">—</div><div class="u">of <span id="v-budget">—</span> s · window <span id="v-wall">—</span> ms wall</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><b>neural activity</b> firing neurons · soma positions <span class="r" id="scatter-note">2,000 sampled</span></div>
+        <canvas class="scatter" id="scatter"></canvas>
+        <div class="legend">
+          <span><i style="background:#4fb7c4"></i>optic lobe</span><span><i style="background:#b06fd6"></i>central brain</span>
+          <span><i style="background:#d9a441"></i>VNC</span><span><i style="background:#f0b35a"></i>descending (read by the brush)</span>
+          <span><i style="background:#8de08a"></i>Kenyon cells</span>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="ph"><b>descending neurons → brush</b> spikes per second <span class="r" id="cmd-line">—</span></div>
+        <div class="bars">
+          <div class="bar pair"><span class="n">DNa02 L | R</span><div class="t"><div class="f l" id="b-l"></div><div class="f r" id="b-r"></div></div><span class="hz"><span id="h-l">0</span><small> | </small><span id="h-r">0</span></span></div>
+          <div class="bar"><span class="n">DNa01 fwd</span><div class="t"><div class="f" id="b-fwd"></div></div><span class="hz" id="h-fwd">0</span></div>
+          <div class="bar"><span class="n">MDN back</span><div class="t"><div class="f mdn" id="b-mdn"></div></div><span class="hz" id="h-mdn">0</span></div>
+          <div class="bar"><span class="n">DNp09 stop</span><div class="t"><div class="f stop" id="b-stop"></div></div><span class="hz" id="h-stop">0</span></div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel">
+          <div class="ph"><b>palette from the brain</b></div>
+          <div class="colour-now"><div class="chip" id="chip"></div>
+            <div class="mix">optic <b id="m-optic">—</b> · central <b id="m-central">—</b> · VNC <b id="m-vnc">—</b><br>Kenyon <b id="m-kc">—</b> → saturation · rate → lightness</div></div>
+          <div class="swatches" id="swatches"></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><b>mushroom body</b> learning</div>
+          <div class="bars">
+            <div class="bar"><span class="n">depressed</span><div class="t"><div class="f" id="b-mb" style="background:var(--spike)"></div></div><span class="hz" id="h-mb">0</span></div>
+          </div>
+          <div class="mix" style="font-size:11px;color:var(--paper-dim);margin-top:8px">
+            mean gain <b id="mb-gain" style="color:var(--paper)">—</b> · rewards <b id="mb-rew" style="color:var(--paper)">—</b> · punishments <b id="mb-pun" style="color:var(--paper)">—</b><br>
+            KC→MBON synapses under dopamine. Depression only — that is the rule a fly actually uses.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="ph"><b>studio log</b> <span class="r">newest first</span></div>
+        <ul class="log" id="log"><li><span class="t">—</span><span>waiting for the studio</span></li></ul>
+      </div>
+    </div>
+  </section>
+
+  <p class="kicker" style="margin-top:56px">Latest sittings</p>
+  <h2 class="sec" style="margin-top:0">Fresh off the easel</h2>
+  <div class="gallery" id="latest"><div class="empty">no finished sittings yet</div></div>
+
+  <p class="kicker" style="margin-top:56px">What it is</p>
+  <h2 class="sec" style="margin-top:0">A real nervous system, not a metaphor</h2>
+  <div class="prose">
+    <p>The male <i>Drosophila</i> central nervous system connectome was released in September 2026 by HHMI Janelia FlyEM, the Cambridge
+      Connectomics Group and Google Research under CC-BY 4.0. We keep the <b>165,122 neurons marked traced</b>, drop pairs with fewer
+      than three synapses, and take each connection's sign from its predicted neurotransmitter — acetylcholine excites, GABA and
+      glutamate inhibit. The neurons run as leaky integrate-and-fire units after Shiu et al. 2024: rest −52 mV, threshold −45 mV, 20 ms tau.</p>
+    <p>Nothing is invented and nothing is sampled from a distribution. It is not a neural network "inspired by" a brain. The wiring is
+      never trained; the only free parameters are one gain per cell type, and even those are left at 1.0 unless a gains file says otherwise.</p>
+  </div>
+
+  <p class="kicker" style="margin-top:56px">How it paints</p>
+  <h2 class="sec" style="margin-top:0">It sees with a fly's eye and moves with a fly's legs</h2>
+  <div class="cards">
+    <div class="card"><div class="h">01 · see</div><p>A 256 px patch of the canvas around the brush is sampled through <b>892 retinotopic hex columns</b> into L1 (ON) and L2 (OFF) — the lamina cells behind photoreceptors R1–R6. The column map comes from the release's own optic-lobe column assignments.</p></div>
+    <div class="card"><div class="h">02 · integrate</div><p>All 165,122 neurons run for <b>10 ms of brain time</b> per window, 0.2 ms steps. A spike adds sign × synapses × 0.275 mV to every target. Cost tracks how many neurons fire, not the population.</p></div>
+    <div class="card"><div class="h">03 · move</div><p><b>DNa02</b> left-vs-right asymmetry steers. <b>DNa01</b> drives forward. <b>MDN</b>, the moonwalker neuron, walks the brush backwards. <b>DNp09</b> makes a fly freeze, so here it lifts the brush.</p></div>
+    <div class="card"><div class="h">04 · colour</div><p>Hue is the mix of optic lobe, central brain and VNC in the window's spikes. Saturation is the Kenyon-cell share. Lightness is the rate. Width is forward drive. <b>A person chose that mapping</b>, and it never changes.</p></div>
+    <div class="card"><div class="h">05 · learn</div><p>Fresh canvas rewards, the edge punishes — through <b>PAM and PPL1 dopamine cells</b> onto KC→MBON synapses, depression only. Reward-side MBONs are found from wiring, not typed in.</p></div>
+    <div class="card"><div class="h n">06 · mint</div><p>When the sitting's brain time is spent the PNG is hashed. Image and metadata go to IPFS, <code>mint()</code> writes the hash and the seed on chain next to the token, and a Seaport listing goes to OpenSea. <b>Replay the seed, get the same pixels.</b></p></div>
+  </div>
+
+  <p class="kicker" style="margin-top:56px">The plan</p>
+  <h2 class="sec" style="margin-top:0">How it got here</h2>
+  <p class="sub">Not a roadmap of promises — a sequence, with everything above the amber line already done and checkable in the repo.</p>
+  <div class="plan" id="plan">
+    <div class="step"><span class="num">01</span><div class="what"><b>Connectome loaded</b><span>165,122 traced neurons, signed edges from predicted transmitters, built from the public release with <code>run.py build</code></span></div><span class="st done">done</span></div>
+    <div class="step"><span class="num">02</span><div class="what"><b>Eye wired</b><span>892 hex columns into L1 and L2, mapped through the release's own column assignments</span></div><span class="st done">done</span></div>
+    <div class="step"><span class="num">03</span><div class="what"><b>Hands wired</b><span>DNa02, DNa01, MDN and DNp09 driving a brush over a 1024 px canvas</span></div><span class="st done">done</span></div>
+    <div class="step"><span class="num">04</span><div class="what"><b>Score recorded</b><span>every window of every sitting written down, so a painting replays in any browser without the brain running</span></div><span class="st done">done</span></div>
+    <div class="step amber"><span class="num">05</span><div class="what"><b>Reward loop closed</b><span>KC→MBON synapses under dopamine, novelty as the reward, the edge as the punishment</span></div><span class="st done">done</span></div>
+    <div class="step" style="margin-top:14px"><span class="num">06</span><div class="what"><b>Contract on Base</b><span><code>ConnectomeCanvas.sol</code>: owner-only mint, PNG hash and seed stored per token, 5 % royalty</span></div><span class="st building">deploying</span></div>
+    <div class="step"><span class="num">07</span><div class="what"><b>First sitting minted and listed</b><span>IPFS pin, mint, Seaport listing — one signed transaction and one signed order from the painter's keystore</span></div><span class="st next">next</span></div>
+    <div class="step"><span class="num">08</span><div class="what"><b>Trained gains</b><span>evolution strategy over per-type gains toward paintings that cover more canvas without repeating themselves</span></div><span class="st next">next</span></div>
+  </div>
+
+  <p class="kicker" style="margin-top:72px">What is not real, stated plainly</p>
+  <h2 class="sec" style="margin-top:0">The parts that aren't the fly</h2>
+  <div class="honest">
+    <div class="row"><b>The brush is a translation.</b><span>A fly has legs, not a brush. Steering, forward, backward and stop are read from the real descending neurons, but "brush down" and stroke width are a mapping a person wrote.</span></div>
+    <div class="row"><b>Colour is not a fly decision.</b><span>A fly has no notion of paint. Colour is read off which populations carried the spikes, with anchor hues chosen by a person. The mapping is fixed and public.</span></div>
+    <div class="row"><b>The reward is invented.</b><span>The circuit, the plasticity site and the direction of the rule are real and measured. What a fly is rewarded by is sugar, not by covering fresh canvas.</span></div>
+    <div class="row"><b>Background noise is a modelling choice.</b><span>0.1 % of neurons receive a small random kick each step so the network never falls silent. It is seeded, so it replays identically.</span></div>
+    <div class="row"><b>Gains are untrained today.</b><span>Every cell-type gain is 1.0. Training them is step 08. The pictures you see are the anatomy as released, nothing more.</span></div>
+    <div class="row"><b>It has no goals.</b><span>A fly brain has no language and no plan. It cannot see the picture as a picture. Nobody is steering — that is the point, not a claim that it decided anything.</span></div>
+  </div>
+
+  <p class="kicker" style="margin-top:72px">On chain</p>
+  <h2 class="sec" style="margin-top:0">Connectome Canvas · CANVAS</h2>
+  <p class="sub">One ERC-721 per sitting, minted from the painter's own wallet. Next to every token the contract stores the SHA-256 of the PNG and the sitting's seed, so provenance is checked against the block, not against this page.</p>
+  <div class="panel">
+    <div class="contract">
+      <span class="k">contract</span><span class="v addr"><span id="c-addr">not deployed yet</span><button class="copy" id="c-copy" hidden>copy</button></span>
+      <span class="k">chain</span><span class="v" id="c-chain">Base · id 8453</span>
+      <span class="k">standard</span><span class="v">ERC-721 + ERC-2981 (5 % royalty) · owner-only <code>mint(to, uri, pngSha256, seed)</code></span>
+      <span class="k">collection</span><span class="v" id="c-os">OpenSea link appears after the first mint</span>
+      <span class="k">minting</span><span class="v" id="c-mint">—</span>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Connectome data © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, released CC-BY 4.0. Simulation after Shiu et al. 2024.
+  Not affiliated with any of them, nor with OpenSea or Base. Connectome Canvas is an art experiment, not an investment.
+  · <a href="https://github.com/bnbhacker/connectome-canvas">source</a> · <a href="brain.html">the brain</a>
+</footer>
+
+<script src="common.js"></script>
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+  const stage = $("stage"), frame = $("frame"), eye = $("eye"), cursor = $("cursor");
+  cursor.innerHTML = CC.flySVG();
+  let scatter = null, lastSitting = null, frameTick = 0, info = null;
+
+  setInterval(() => { $("s-clock").textContent = new Date().toISOString().slice(11, 19); }, 1000);
+
+  async function getJSON(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+  try {
+    info = await getJSON("api/info");
+    if (info.surrogate) document.body.classList.add("surrogate");
+    $("s-dataset").textContent = info.surrogate ? "SURROGATE GRAPH" : "MALE CNS V1.0";
+    $("s-neurons").textContent = CC.fmt(info.neurons);
+    $("s-edges").textContent = CC.fmt(info.edges);
+    $("v-n").textContent = CC.fmt(info.neurons);
+    $("v-budget").textContent = (info.canvas.budget_ticks * info.canvas.tick_ms / 1000).toFixed(1);
+    if (info.contract) {
+      $("c-addr").textContent = info.contract; $("c-copy").hidden = false;
+      $("c-copy").onclick = () => CC.copy(info.contract, $("c-copy"));
+      const os = info.network === "base" ? "https://opensea.io/assets/base/" : "https://testnets.opensea.io/assets/base_sepolia/";
+      $("c-os").innerHTML = `<a href="${os}${info.contract}" target="_blank" rel="noopener">opensea ↗</a>`;
+      $("c-chain").textContent = info.network === "base" ? "Base · id 8453" : "Base Sepolia · id 84532";
+    }
+    $("c-mint").textContent = info.mint_enabled ? "on — every finished sitting is pinned, minted and listed" : "off — sittings are recorded and shown; minting is armed by the operator";
+    const neurons = await getJSON("api/neurons");
+    scatter = CC.Scatter($("scatter"), neurons);
+    $("scatter-note").textContent = `${CC.fmt(neurons.xyz.length)} sampled · retina map: ${info.retina.layout}`;
+  } catch (e) {
+    $("s-status").textContent = "studio offline";
+    $("offline-note").textContent = "the studio server is not running — the demonstration replays recorded sittings";
+    $("between-text").textContent = "studio offline · see the demonstration";
+    return;
+  }
+
+  function bar(id, hz, max) { $(id).style.width = Math.min(100, hz / max * 100) + "%"; }
+
+  async function poll() {
+    let s;
+    try { s = await getJSON("api/state"); } catch (e) { $("s-status").textContent = "reconnecting"; $("s-status").className = "between"; return; }
+    const painting = s.status === "painting";
+    stage.classList.toggle("idle", !painting);
+    $("s-status").textContent = painting ? "painting live" : "between sittings";
+    $("s-status").className = painting ? "live" : "between";
+    $("next-in").textContent = s.next_sitting_in_s != null ? `next sitting in ${s.next_sitting_in_s}s` : "";
+
+    const w = s.window;
+    $("v-firing").textContent = CC.fmt(w.firing);
+    $("v-sps").textContent = CC.fmt(w.spikes_per_s);
+    $("v-mem").textContent = w.membrane_mv;
+    $("v-wall").textContent = w.wall_ms;
+    if (s.session) {
+      const ss = s.session;
+      $("s-sitting").textContent = "#" + ss.id; $("t-sitting").textContent = "#" + ss.id;
+      $("s-brainms").textContent = (ss.brain_ms / 1000).toFixed(2) + " s";
+      $("v-strokes").textContent = ss.strokes; $("v-lifts").textContent = ss.lifts; $("v-rev").textContent = ss.reversals;
+      $("v-bt").textContent = (ss.brain_ms / 1000).toFixed(1);
+      $("swatches").innerHTML = ss.swatches.map(c => `<i style="background:${c}" title="${c}"></i>`).join("");
+      if (lastSitting !== ss.id) { lastSitting = ss.id; loadLatest(); }
+    }
+    if (s.brush) {
+      const b = s.brush, r = stage.getBoundingClientRect();
+      cursor.style.left = (b.x / 1024 * r.width) + "px";
+      cursor.style.top = (b.y / 1024 * r.height) + "px";
+      cursor.style.transform = `rotate(${b.heading}rad)`;
+      cursor.classList.toggle("lift", b.lift);
+      cursor.innerHTML = CC.flySVG(b.colour);
+      $("t-brush").textContent = `brush ${b.lift ? "up" : "down"} · ${b.width} px · (${Math.round(b.x)}, ${Math.round(b.y)})`;
+    }
+    const rt = s.rates;
+    const pairMax = Math.max(10, rt.dna02_l + rt.dna02_r);
+    $("b-l").style.width = (rt.dna02_l / pairMax * 50) + "%"; $("b-r").style.width = (rt.dna02_r / pairMax * 50) + "%";
+    $("h-l").textContent = rt.dna02_l.toFixed(0); $("h-r").textContent = rt.dna02_r.toFixed(0);
+    bar("b-fwd", rt.dna01, 120); $("h-fwd").textContent = rt.dna01.toFixed(0);
+    bar("b-mdn", rt.mdn, 120); $("h-mdn").textContent = rt.mdn.toFixed(0);
+    bar("b-stop", rt.dnp09, 120); $("h-stop").textContent = rt.dnp09.toFixed(0);
+    const c = s.command;
+    $("cmd-line").textContent = `turn ${c.turn >= 0 ? "+" : ""}${c.turn.toFixed(2)} · speed ${c.speed.toFixed(2)} · ${c.reverse ? "reverse" : "forward"} · brush ${c.lift ? "up" : "down"}`;
+
+    const col = s.colour;
+    $("chip").style.background = col.hex; $("t-colour").textContent = col.hex;
+    $("m-optic").textContent = Math.round(col.optic * 100) + "%"; $("m-central").textContent = Math.round(col.central * 100) + "%";
+    $("m-vnc").textContent = Math.round(col.vnc * 100) + "%"; $("m-kc").textContent = (col.kenyon * 100).toFixed(1) + "%";
+
+    const mb = s.mushroom;
+    $("b-mb").style.width = (mb.synapses ? Math.min(100, mb.changed / mb.synapses * 100 * 4) : 0) + "%";
+    $("h-mb").textContent = CC.fmt(mb.changed); $("mb-gain").textContent = mb.mean_gain.toFixed(3);
+    $("mb-rew").textContent = mb.rewards; $("mb-pun").textContent = mb.punishments;
+
+    if (scatter) scatter.fire(s.fired);
+    $("log").innerHTML = s.events.slice(0, 40).map(e => `<li><span class="t">${CC.hhmm(e.t)}</span><span class="k-${e.kind}">${CC.esc(e.text)}</span></li>`).join("") || "<li><span class='t'>—</span><span>quiet</span></li>";
+
+    if (painting || frameTick % 5 === 0) {
+      frame.src = "api/frame.png?size=768&t=" + Date.now();
+      eye.src = "api/eye.png?t=" + Date.now();
+    }
+    frameTick++;
+  }
+
+  async function loadLatest() {
+    try {
+      const items = await getJSON("api/gallery");
+      const el = $("latest");
+      if (!items.length) return;
+      el.innerHTML = items.slice(0, 4).map(p => pieceCard(p)).join("");
+    } catch (e) {}
+  }
+  function pieceCard(p) {
+    const ch = p.chain || {};
+    const status = ch.listing ? `<span class="status listed">listed · ${ch.listing.price_eth} ETH</span>` : ch.token_id != null ? `<span class="status minted">minted · token ${ch.token_id}</span>` : `<span class="status">${p.surrogate ? "surrogate · not minted" : "awaiting mint"}</span>`;
+    return `<div class="piece"><a href="demo.html#${p.id}"><img src="gallery/${p.png}" alt="${CC.esc(p.name)}" loading="lazy"></a>
+      <div class="meta"><div class="name">${CC.esc(p.name)}</div>
+      <div class="sw">${(p.swatches || []).slice(0, 8).map(c => `<i style="background:${c}"></i>`).join("")}</div>
+      <div class="stats"><span>${(p.brain_ms / 1000).toFixed(1)} s brain</span><span>${p.strokes} strokes</span><span>${CC.fmt(p.spikes)} spikes</span><span>seed ${p.seed}</span></div>
+      ${status}
+      <div class="links"><a href="demo.html#${p.id}">replay</a>${ch.opensea ? `<a href="${ch.opensea}" target="_blank" rel="noopener">opensea ↗</a>` : ""}${ch.explorer ? `<a href="${ch.explorer}" target="_blank" rel="noopener" class="mute">tx ↗</a>` : ""}</div></div></div>`;
+  }
+
+  loadLatest();
+  poll();
+  setInterval(poll, 1000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "connectome-canvas-tools",
+  "private": true,
+  "type": "module",
+  "description": "OpenSea listing helper for Connectome Canvas",
+  "dependencies": {
+    "ethers": "^6.13.4",
+    "opensea-js": "^7.1.14"
+  }
+}

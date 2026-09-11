@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gallery — Connectome Canvas</title>
+<meta name="description" content="Every finished sitting of the fly brain, with its seed, hashes, and where it lives on chain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="strip">
+  <span>GALLERY <b>EVERY SITTING</b></span>
+  <span><b id="s-count">—</b> PIECES</span>
+  <span><b id="s-minted">—</b> MINTED</span>
+  <span><b id="s-listed">—</b> LISTED</span>
+  <span class="right" id="s-src">—</span>
+</div>
+<nav class="nav"></nav>
+
+<main class="wrap">
+  <p class="kicker">Connectome Canvas · gallery</p>
+  <h1 class="title" style="font-size:44px">Everything the fly has <em>finished.</em></h1>
+  <p class="lede">One card per sitting. Each carries the seed it was painted from, the SHA-256 of the PNG, and — once minted — the
+    token, the transaction and the OpenSea listing. Click a picture to watch it being painted.</p>
+
+  <div class="controls">
+    <label class="t">show <select id="filter"><option value="all">all sittings</option><option value="minted">minted</option><option value="listed">listed</option><option value="real">connectome only</option></select></label>
+    <span class="t" id="note"></span>
+  </div>
+
+  <div class="gallery" id="grid"><div class="empty">loading…</div></div>
+</main>
+
+<footer>
+  Connectome data © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, CC-BY 4.0.
+  Connectome Canvas is an art experiment, not an investment. · <a href="https://github.com/bnbhacker/connectome-canvas">source</a>
+</footer>
+
+<script src="common.js"></script>
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+  async function getJSON(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+  let items = [], imgBase = "gallery/";
+  try {
+    items = await getJSON("api/gallery");
+    $("s-src").textContent = "live from the studio";
+  } catch (e) {
+    // static hosting: fall back to the recordings index, thumbnails included
+    try { items = await getJSON("recordings/index.json"); imgBase = "recordings/"; $("s-src").textContent = "static · from recordings"; }
+    catch (e2) { $("grid").innerHTML = '<div class="empty">no pieces yet</div>'; return; }
+  }
+  items.sort((a, b) => b.id - a.id);
+
+  function card(p) {
+    const ch = p.chain || {};
+    const img = imgBase === "gallery/" ? "gallery/" + p.png : "recordings/" + (p.thumb || p.png);
+    const status = ch.listing ? `<span class="status listed">listed · ${ch.listing.price_eth} ETH</span>`
+      : ch.token_id != null ? `<span class="status minted">minted · token ${ch.token_id}</span>`
+      : `<span class="status">${p.surrogate ? "surrogate · not minted" : "awaiting mint"}</span>`;
+    return `<div class="piece" id="p${p.id}">
+      <a href="demo.html#${p.id}" title="watch it being painted"><img src="${img}" alt="${CC.esc(p.name)}" loading="lazy"></a>
+      <div class="meta">
+        <div class="name">${CC.esc(p.name)}</div>
+        <div class="sw">${(p.swatches || []).slice(0, 10).map(c => `<i style="background:${c}"></i>`).join("")}</div>
+        <div class="stats"><span>${(p.brain_ms / 1000).toFixed(1)} s brain</span><span>${p.strokes} strokes</span><span>${CC.fmt(p.spikes)} spikes</span>${p.synapses_changed != null ? `<span>${CC.fmt(p.synapses_changed)} synapses changed</span>` : ""}<span>seed ${p.seed}</span></div>
+        ${p.png_sha256 ? `<div class="stats"><span title="${p.png_sha256}">sha ${p.png_sha256.slice(0, 12)}…</span></div>` : ""}
+        ${status}
+        <div class="links">
+          <a href="demo.html#${p.id}">replay</a>
+          ${ch.opensea ? `<a href="${ch.opensea}" target="_blank" rel="noopener">opensea ↗</a>` : ""}
+          ${ch.explorer ? `<a href="${ch.explorer}" target="_blank" rel="noopener" class="mute">tx ↗</a>` : ""}
+          ${ch.image_cid ? `<a href="https://gateway.pinata.cloud/ipfs/${ch.image_cid}" target="_blank" rel="noopener" class="mute">ipfs ↗</a>` : ""}
+          ${imgBase === "gallery/" ? `<a href="gallery/${p.png}" target="_blank" class="mute">png ↗</a>` : ""}
+        </div>
+      </div></div>`;
+  }
+
+  function render() {
+    const f = $("filter").value;
+    const shown = items.filter(p => f === "all" || (f === "minted" && p.chain && p.chain.token_id != null) || (f === "listed" && p.chain && p.chain.listing) || (f === "real" && !p.surrogate));
+    $("grid").innerHTML = shown.length ? shown.map(card).join("") : '<div class="empty">nothing here yet</div>';
+    $("note").textContent = `${shown.length} shown`;
+  }
+  $("filter").onchange = render;
+  $("s-count").textContent = items.length;
+  $("s-minted").textContent = items.filter(p => p.chain && p.chain.token_id != null).length;
+  $("s-listed").textContent = items.filter(p => p.chain && p.chain.listing).length;
+  render();
+  if (location.hash) { const el = document.getElementById("p" + location.hash.slice(1)); el && el.scrollIntoView({ block: "center" }); }
+})();
+</script>
+</body>
+</html>
