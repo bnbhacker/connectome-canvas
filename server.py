@@ -74,11 +74,28 @@ class Studio:
             piece = p.finished[-1] if p.finished else None
             if piece and self.mint:
                 threading.Thread(target=self._mint, args=(piece["id"],), daemon=True).start()
+            if piece and os.environ.get("CANVAS_AUTOPUBLISH", "0") == "1":
+                threading.Thread(target=self._publish, args=(piece["id"],), daemon=True).start()
             if self.max_sittings and self.done >= self.max_sittings:
                 continue
             self.next_sitting_at = time.time() + self.pause_s
             self.stop.wait(self.pause_s)
             self.next_sitting_at = None
+
+    def _publish(self, piece_id: int) -> None:
+        """Push site/ (new score, thumbnail, gallery index) to Vercel so the public replay stays current."""
+        import subprocess
+        import sys
+        try:
+            self.painter.event("publish", f"publishing sitting #{piece_id} to the site …")
+            proc = subprocess.run([sys.executable, str(ROOT / "run.py"), "publish"], cwd=ROOT,
+                                  capture_output=True, text=True, timeout=600)
+            if proc.returncode == 0:
+                self.painter.event("publish", f"site updated with sitting #{piece_id}")
+            else:
+                self.painter.event("error", f"publish failed: {(proc.stderr or proc.stdout).strip()[-200:]}")
+        except Exception as e:
+            self.painter.event("error", f"publish failed: {type(e).__name__}: {e}")
 
     def _mint(self, piece_id: int) -> None:
         try:
@@ -181,12 +198,14 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
 
 
 def serve(port: int = 4660, host: str = "127.0.0.1", graph_path: Path | None = None, sittings: int | None = None,
-          pause_s: float | None = None) -> None:
+          pause_s: float | None = None, autopublish: bool = False) -> None:
     import uvicorn
     if sittings is not None:
         os.environ["CANVAS_SITTINGS"] = str(sittings)
     if pause_s is not None:
         os.environ["CANVAS_PAUSE_S"] = str(pause_s)
+    if autopublish:
+        os.environ["CANVAS_AUTOPUBLISH"] = "1"
     uvicorn.run(build_app(graph_path), host=host, port=port, log_level="warning")
 
 

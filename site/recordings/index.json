@@ -27,5 +27,34 @@
   "png_sha256": "45619af19c86938a3411258f58ebd89da4d7750c5b0f115a5f87cfc31173aa2e",
   "synapses_changed": 3,
   "chain": null
+ },
+ {
+  "id": 2,
+  "name": "Connectome Canvas #2",
+  "png": "canvas-0002.png",
+  "thumb": "canvas-0002.jpg",
+  "seed": 2853223570,
+  "recording": "recordings/canvas-0002.json",
+  "strokes": 21,
+  "spikes": 4126171,
+  "brain_ms": 6000.0,
+  "surrogate": false,
+  "swatches": [
+   "#57acbf",
+   "#54bebb",
+   "#5ba3c1",
+   "#58bfbe",
+   "#c26097",
+   "#48b9b9",
+   "#55bebe",
+   "#51bdbb",
+   "#50bcb8",
+   "#50bcbb",
+   "#4cbbb5",
+   "#49bab4"
+  ],
+  "png_sha256": "e642a66cb2daf5adac41d759528ad09f81fdf8d3e3bd1091458974b9c2aeddc2",
+  "synapses_changed": 75,
+  "chain": null
  }
 ]
