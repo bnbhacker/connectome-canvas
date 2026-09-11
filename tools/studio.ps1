@@ -14,7 +14,8 @@ if (Test-Path $stopFile) { Remove-Item $stopFile }
 
 while ($true) {
     "$(Get-Date -Format s) studio starting" | Add-Content $log
-    & py -3 run.py serve --port 4660 --tunnel --autopublish 2>&1 | Add-Content $log
+    # cmd's own redirection keeps studio.log readable while the studio is writing to it
+    cmd /c "py -3 run.py serve --port 4660 --tunnel --autopublish >> studio.log 2>&1"
     "$(Get-Date -Format s) studio exited" | Add-Content $log
     if (Test-Path $stopFile) { "$(Get-Date -Format s) stop file found, not restarting" | Add-Content $log; break }
     Start-Sleep -Seconds 15

@@ -58,6 +58,8 @@ ABI = [
      "outputs": [{"name": "", "type": "uint256"}]},
     {"type": "function", "name": "tokenURI", "stateMutability": "view", "inputs": [{"name": "tokenId", "type": "uint256"}],
      "outputs": [{"name": "", "type": "string"}]},
+    {"type": "function", "name": "provenance", "stateMutability": "view", "inputs": [{"name": "", "type": "uint256"}],
+     "outputs": [{"name": "pngSha256", "type": "bytes32"}, {"name": "seed", "type": "uint64"}, {"name": "mintedAt", "type": "uint64"}]},
     {"type": "event", "name": "Transfer", "anonymous": False,
      "inputs": [{"indexed": True, "name": "from", "type": "address"},
                 {"indexed": True, "name": "to", "type": "address"},
@@ -180,6 +182,23 @@ def mint_piece(piece_id: int, dry_run: bool = True, network: str | None = None) 
     contract = w3.eth.contract(address=Web3.to_checksum_address(contract_addr), abi=ABI)
     next_id = int(contract.functions.nextId().call())
     max_supply = int(contract.functions.maxSupply().call())
+    # crash recovery: a previous run may have sent this piece's mint and died before recording it.
+    # Pieces are minted strictly in order, so only the newest token can be that orphan — if it carries
+    # this picture's hash, record it instead of minting the same picture twice.
+    if next_id > 1:
+        last_sha = bytes(contract.functions.provenance(next_id - 1).call()[0])
+        if last_sha == bytes.fromhex(piece["png_sha256"]):
+            token_id = next_id - 1
+            image_uri, meta_uri, extra = publish_metadata(piece, png_path, mode, token_id)
+            addr = Web3.to_checksum_address(contract_addr)
+            result = {"network": network, "contract": addr, "token_id": token_id, "tx": None, "block": None,
+                      "owner": to, "metadata_mode": mode, "image": image_uri, "metadata": meta_uri, **extra,
+                      "explorer": f"{net['explorer']}/token/{addr}/instance/{token_id}",
+                      "opensea": f"{net['opensea']}/{addr}/{token_id}", "minted_at": time.time(),
+                      "listing": None, "recovered": True}
+            piece["chain"] = result
+            save_piece(path, piece)
+            return result
     if next_id > max_supply:
         raise SystemExit(f"sold out: {max_supply} tokens minted")
     # metadata is written under the id the contract will assign (ids are sequential, one minter)

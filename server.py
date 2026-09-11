@@ -200,40 +200,76 @@ class Tunnel:
 
     URL_RE = __import__("re").compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 
-    def __init__(self, port: int, on_ready) -> None:
+    def __init__(self, port: int, on_ready, on_event=None, log_path: Path | None = None) -> None:
         self.port = port
         self.on_ready = on_ready
+        self.on_event = on_event or (lambda kind, text: None)
+        self.log_path = log_path or (ROOT / "build" / "tunnel.log")
         self.url: str | None = None
         self.proc = None
+        self.restarts = 0
+        self._halt = threading.Event()
+
+    @staticmethod
+    def _exe() -> str:
+        import shutil
+        # the real binary, not scoop's shim: killing a shim can orphan the cloudflared behind it
+        real = Path.home() / "scoop" / "apps" / "cloudflared" / "current" / "cloudflared.exe"
+        if real.exists():
+            return str(real)
+        exe = shutil.which("cloudflared")
+        if exe:
+            return exe
+        raise RuntimeError("cloudflared not found (scoop install cloudflared)")
 
     def start(self) -> None:
-        import shutil
-        import subprocess
-        exe = shutil.which("cloudflared")
-        if not exe:
-            candidate = Path.home() / "scoop" / "shims" / "cloudflared.exe"
-            exe = str(candidate) if candidate.exists() else None
-        if not exe:
-            raise RuntimeError("cloudflared not found (scoop install cloudflared)")
-        self.proc = subprocess.Popen(
-            [exe, "tunnel", "--url", f"http://127.0.0.1:{self.port}", "--no-autoupdate"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
-        )
-        threading.Thread(target=self._pump, name="tunnel", daemon=True).start()
+        self._exe()                                   # fail fast when it is not installed
+        threading.Thread(target=self._supervise, name="tunnel", daemon=True).start()
 
-    def _pump(self) -> None:
-        assert self.proc and self.proc.stdout
-        for line in self.proc.stdout:
-            m = self.URL_RE.search(line)
-            # cloudflared also logs its own API endpoint (api.trycloudflare.com); the tunnel is the other one
-            if m and not self.url and not m.group(0).startswith("https://api."):
-                self.url = m.group(0)
-                try:
-                    self.on_ready(self.url)
-                except Exception:
-                    pass
+    def _supervise(self) -> None:
+        """Keep one quick tunnel alive: log everything, announce each new address, restart with backoff."""
+        import collections
+        import subprocess
+        backoff = 5.0
+        while not self._halt.is_set():
+            tail: collections.deque = collections.deque(maxlen=12)
+            try:
+                self.proc = subprocess.Popen(
+                    [self._exe(), "tunnel", "--url", f"http://127.0.0.1:{self.port}", "--no-autoupdate"],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+                )
+            except Exception as e:
+                self.on_event("error", f"tunnel could not start: {e}; retrying in {int(backoff)} s")
+                self._halt.wait(backoff)
+                backoff = min(300.0, backoff * 2)
+                continue
+            self.log_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.log_path, "a", encoding="utf-8") as log:
+                for line in self.proc.stdout:
+                    log.write(line)
+                    log.flush()
+                    tail.append(line.strip())
+                    m = self.URL_RE.search(line)
+                    # cloudflared also logs its own API host (api.trycloudflare.com); the tunnel is the other one
+                    if m and self.url is None and not m.group(0).startswith("https://api."):
+                        self.url = m.group(0)
+                        backoff = 5.0
+                        try:
+                            self.on_ready(self.url)
+                        except Exception as e:
+                            self.on_event("error", f"tunnel announce failed: {e}")
+            code = self.proc.wait()
+            self.url = None
+            if self._halt.is_set():
+                break
+            self.restarts += 1
+            last = next((t for t in reversed(tail) if " ERR " in t or "error" in t.lower()), tail[-1] if tail else "")
+            self.on_event("error", f"tunnel exited (code {code}); restarting in {int(backoff)} s · {last[-160:]}")
+            self._halt.wait(backoff)
+            backoff = min(300.0, backoff * 2)
 
     def stop(self) -> None:
+        self._halt.set()
         if self.proc and self.proc.poll() is None:
             self.proc.terminate()
 
@@ -268,7 +304,7 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
             painter.event("tunnel", f"studio reachable at {url}")
             if os.environ.get("CANVAS_AUTOPUBLISH", "0") == "1":
                 threading.Thread(target=studio._publish, args=("the studio address",), daemon=True).start()
-        tunnel = Tunnel(_env_int("CANVAS_PORT", 4660), _tunnel_ready)
+        tunnel = Tunnel(_env_int("CANVAS_PORT", 4660), _tunnel_ready, on_event=lambda kind, text: painter.event(kind, text))
     app.state.tunnel = tunnel
 
     @app.on_event("startup")
