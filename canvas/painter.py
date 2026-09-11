@@ -81,6 +81,11 @@ class Session:
     x: float = 0.0
     y: float = 0.0
     heading: float = 0.0
+    omega: float = 0.0          # turning rate carried between windows (style gene: inertia)
+    mirror: bool = False        # this sitting is painted bilaterally
+    paper: tuple = (12, 12, 16)
+    genes: dict = field(default_factory=dict)
+    hue_bins: set = field(default_factory=set)
     lifted: bool = False
     width: float = 4.0
     colour: str = "#5a5a60"
@@ -257,14 +262,26 @@ class Painter:
             self.painted = np.zeros((self.size, self.size), dtype=bool)
             s = Session(id=sid, seed=seed, started=time.time())
             self._proposal = self.evolution.propose()
+            genes = self._proposal["genes"]
+            s.genes = dict(genes)
+            self.palette.set_genes(genes)
+            self.motor.lift_hz = float(genes["lift_hz"])
+            import colorsys
+            pr, pg, pb = colorsys.hls_to_rgb(genes["paper_hue"], genes["paper_light"], genes["paper_sat"])
+            s.paper = (int(pr * 255), int(pg * 255), int(pb * 255))
+            self.img = Image.new("RGB", (self.size, self.size), s.paper)
+            self.lum = np.full((self.size, self.size), float(genes["paper_light"]), dtype=np.float32)
             margin = self.size * 0.2
             s.x = float(margin + b.rng.random() * (self.size - 2 * margin))
             s.y = float(margin + b.rng.random() * (self.size - 2 * margin))
             s.heading = float(b.rng.random() * 2 * math.pi)
+            s.mirror = bool(b.rng.random() < genes["mirror"])
             self.session = s
             self.synapses_changed = 0
             self.event("session", f"sitting #{sid} began · seed {seed} · generation {self._proposal['generation']} "
-                                  f"({self._proposal['mutated_types']} cell types mutated) · brush at ({int(s.x)}, {int(s.y)})")
+                                  f"({self._proposal['mutated_types']} cell types mutated) · "
+                                  f"{'bilateral' if s.mirror else 'one-handed'} · hue starts at {int(genes['hue_offset'] * 360)}° · "
+                                  f"brush at ({int(s.x)}, {int(s.y)})")
             return s
 
     def tick(self) -> bool:
@@ -301,9 +318,13 @@ class Painter:
             b.gain_global = np.float32(min(GAIN_MAX, float(b.gain_global) * GAIN_UP))
         s.gain_sum += float(b.gain_global)
 
-        # ---- move the brush
-        s.heading += cmd.turn * MAX_TURN
-        step = MIN_STEP + cmd.speed * MAX_STEP
+        # ---- move the brush (the style genes decide how far a DN decision travels)
+        g = s.genes or {}
+        turn_gain = float(g.get("turn_gain", MAX_TURN))
+        inertia = float(g.get("inertia", 0.0))
+        s.omega = inertia * s.omega + (1.0 - inertia) * cmd.turn * turn_gain
+        s.heading += s.omega
+        step = MIN_STEP + cmd.speed * float(g.get("step_gain", MAX_STEP))
         if cmd.reverse:
             step = -step
             s.reversals += 1
@@ -324,7 +345,7 @@ class Painter:
             s.bumps += 1
             self.event("bump", "hit the edge of the canvas · punishment", 2.0)
 
-        width = 3.0 + 26.0 * cmd.speed
+        width = 3.0 + float(g.get("width_gain", 26.0)) * cmd.speed
         new_px = 0
         if cmd.lift:
             if not s.lifted:
@@ -336,6 +357,9 @@ class Painter:
                 s.strokes += 1
             s.lifted = False
             new_px = self._stroke((s.x, s.y), (nx, ny), width, colour.rgb)
+            if s.mirror:   # a bilateral animal: the other side of the body leaves the same mark
+                new_px += self._stroke((self.size - s.x, s.y), (self.size - nx, ny), width, colour.rgb)
+            s.hue_bins.add(int(colour.hue * 12) % 12)
         s.path_px += abs(step)
         s.x, s.y, s.width, s.colour = float(nx), float(ny), float(width), colour.hex
 
@@ -371,6 +395,7 @@ class Painter:
             [int(i) for i in keep],
             round(float(b.gain_global), 4),
             [round(rates.v_l, 2), round(rates.v_r, 2), round(rates.v_fwd, 2)],
+            int(s.mirror),
         ])
 
         if s.ticks >= self.budget_ticks:
@@ -412,10 +437,13 @@ class Painter:
             counts_total = self.last_counts if self.last_counts is not None else np.zeros(b.n, dtype=np.int32)
             top = self._top_types(counts_total)
             coverage = float(self.painted.sum()) / float(self.size * self.size) if self.painted is not None else 0.0
-            evo = self.evolution.evaluate(coverage)
+            # fitness: canvas covered, plus a bonus for using more of the colour wheel (12 bins)
+            fitness = coverage + 0.04 * (len(s.hue_bins) / 12.0)
+            evo = self.evolution.evaluate(fitness)
             self._save_mushroom()
-            self.event("evolve", f"generation {evo['generation']}: covered {coverage * 100:.2f} % of the canvas · "
-                                 f"{'kept' if evo['accepted'] else 'discarded'} the mutation (best {evo['best_fitness'] * 100:.2f} %)")
+            self.event("evolve", f"generation {evo['generation']}: covered {coverage * 100:.2f} % of the canvas, "
+                                 f"{len(s.hue_bins)}/12 hues · {'kept' if evo['accepted'] else 'discarded'} the mutation "
+                                 f"(bar {evo['best_fitness'] * 100:.2f})")
             piece = {
                 "id": s.id,
                 "name": f"Canvas Fly #{s.id}",
@@ -437,9 +465,14 @@ class Painter:
                 "rewards": self.mushroom.rewards,
                 "punishments": self.mushroom.punishments,
                 "coverage": round(coverage, 6),
+                "fitness": round(fitness, 6),
+                "hues_used": len(s.hue_bins),
                 "generation": evo["generation"],
                 "gains_sha256": evo["gains_sha256"],
                 "mutation_kept": evo["accepted"],
+                "style": {k: round(float(v), 4) for k, v in (s.genes or {}).items()},
+                "mirror": s.mirror,
+                "paper": list(s.paper),
                 "top_types": top,
                 "swatches": s.swatches[-12:],
                 "png": f"{stem}.png",
@@ -457,10 +490,12 @@ class Painter:
                 "piece": {k: v for k, v in piece.items() if k not in ("recording",)},
                 "size": self.size,
                 "tick_ms": self.tick_ms,
-                "paper": list(self.paper),
+                "paper": list(s.paper),
+                "mirror": s.mirror,
+                "style": {k: round(float(v), 4) for k, v in (s.genes or {}).items()},
                 "columns": ["x", "y", "lift", "reverse", "width", "colour", "spikes", "firing",
                             "dna02_l", "dna02_r", "dna01", "mdn", "dnp09", "fired_subsample", "gain_global",
-                            "depol_mv[l,r,fwd]"],
+                            "depol_mv[l,r,fwd]", "mirror"],
                 "neurons": {"xyz": self.sub_xyz, "cls": self.sub_class,
                             "legend": ["optic", "central", "vnc", "descending", "kenyon"]},
                 "ticks": s.score,
@@ -507,7 +542,8 @@ class Painter:
     def frame_png(self, size: int = 512) -> bytes:
         import io
         with self.lock:
-            img = self.img.copy() if self.img is not None else Image.new("RGB", (self.size, self.size), self.paper)
+            paper = self.session.paper if self.session is not None else self.paper
+            img = self.img.copy() if self.img is not None else Image.new("RGB", (self.size, self.size), paper)
         if size != self.size:
             img = img.resize((size, size), Image.LANCZOS)
         buf = io.BytesIO()
@@ -539,7 +575,9 @@ class Painter:
                 "started": s.started, "swatches": s.swatches[-16:],
             },
             "brush": None if s is None else {"x": round(s.x, 1), "y": round(s.y, 1), "heading": round(s.heading, 3),
-                                             "lift": s.lifted, "width": round(s.width, 1), "colour": s.colour},
+                                             "lift": s.lifted, "width": round(s.width, 1), "colour": s.colour,
+                                             "mirror": s.mirror, "hues": len(s.hue_bins)},
+            "style": None if s is None else {k: round(float(v), 3) for k, v in (s.genes or {}).items()},
             "rates": {"dna02_l": round(r.dna02_l, 1), "dna02_r": round(r.dna02_r, 1), "dna01": round(r.dna01, 1),
                       "mdn": round(r.mdn, 1), "dnp09": round(r.dnp09, 1),
                       "v_l": round(r.v_l, 2), "v_r": round(r.v_r, 2), "v_fwd": round(r.v_fwd, 2),

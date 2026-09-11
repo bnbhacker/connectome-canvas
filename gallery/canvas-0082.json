@@ -92,7 +92,19 @@
   "explorer": "https://robinhoodchain.blockscout.com/tx/87cc503331a54bbfa3023751e8a7ef95c970757fc109f29d1b14c914bd576253",
   "opensea": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/82",
   "minted_at": 1789110463.2091355,
-  "listing": null
+  "listing": {
+   "price": "2.5",
+   "price_eth": null,
+   "currency": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+   "currency_symbol": "USDG",
+   "days": 30,
+   "order_hash": "0xdbdab6287065b186ad84d633fde47efe728766001fffae5310822a8aee8f7a8d",
+   "slug": "canvas-fly-362954926",
+   "approval_tx": null,
+   "listed_at": 1789116067.2250202,
+   "expires": 1791708066,
+   "url": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/82"
+  }
  },
  "thumb": "canvas-0082.jpg"
 }

@@ -1,0 +1,83 @@
+{
+ "id": 559,
+ "name": "Canvas Fly #559",
+ "seed": 715966025,
+ "finished_at": 1789137183.8961637,
+ "wall_seconds": 25.0,
+ "brain_ms": 6000.0,
+ "ticks": 600,
+ "strokes": 11,
+ "lifts": 11,
+ "reversals": 8,
+ "bumps": 8,
+ "path_px": 5334.0,
+ "spikes": 2774840,
+ "mean_rate_hz": 2.801,
+ "gain_final": 0.5596,
+ "gain_mean": 0.6153,
+ "synapses_changed": 90,
+ "rewards": 261092,
+ "punishments": 3736,
+ "coverage": 0.031363,
+ "generation": 505,
+ "gains_sha256": "a657ffeeb22459005753557e4292130b900c98c21509b58883441b29f70a971b",
+ "mutation_kept": false,
+ "top_types": [
+  {
+   "type": "L5",
+   "spikes": 425
+  },
+  {
+   "type": "L2",
+   "spikes": 417
+  },
+  {
+   "type": "C3",
+   "spikes": 398
+  },
+  {
+   "type": "R1-R6",
+   "spikes": 341
+  },
+  {
+   "type": "C2",
+   "spikes": 320
+  },
+  {
+   "type": "Tm3",
+   "spikes": 171
+  },
+  {
+   "type": "Mi1",
+   "spikes": 143
+  },
+  {
+   "type": "Dm15",
+   "spikes": 134
+  }
+ ],
+ "swatches": [
+  "#67c5c2",
+  "#6ac6c5",
+  "#9078cb",
+  "#77cbca",
+  "#79cbcc",
+  "#72b5c9",
+  "#70c8c8",
+  "#6cc7c6",
+  "#6ea6c8",
+  "#69c6c5",
+  "#66c4c5",
+  "#5fb9c2"
+ ],
+ "png": "canvas-0559.png",
+ "png_sha256": "e39b159039b50ec7ef46e325aaef80898af960af12d3f1d1f4c222ad0049f954",
+ "recording": "recordings/canvas-0559.json",
+ "dataset": "FlyEM male CNS connectome v1.0 (minconf 0.5, traced only)",
+ "surrogate": false,
+ "graph_sha256": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8",
+ "neurons": 165122,
+ "edges": 10228000,
+ "chain": null,
+ "thumb": "canvas-0559.jpg"
+}

@@ -81,7 +81,11 @@
       if (prev) {
         const dx = pos[0] - prev[0], dy = pos[1] - prev[1];
         if (dx || dy) heading = Math.atan2(dy, dx);
-        if (!t[2]) { stroke(prev, pos, t[4], t[5]); if (prevLift) strokes++; }
+        if (!t[2]) {
+          stroke(prev, pos, t[4], t[5]);
+          if (t[16] || score.mirror) stroke([score.size - prev[0], prev[1]], [score.size - pos[0], pos[1]], t[4], t[5]);
+          if (prevLift) strokes++;
+        }
       } else { strokes = 1; }
       if (t[2] && !prevLift) lifts++;
       if (t[3]) reversals++;

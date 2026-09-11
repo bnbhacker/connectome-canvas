@@ -1,0 +1,98 @@
+{
+ "id": 479,
+ "name": "Canvas Fly #479",
+ "seed": 3514539788,
+ "finished_at": 1789132614.0161612,
+ "wall_seconds": 28.1,
+ "brain_ms": 6000.0,
+ "ticks": 600,
+ "strokes": 21,
+ "lifts": 21,
+ "reversals": 13,
+ "bumps": 3,
+ "path_px": 6724.1,
+ "spikes": 4153907,
+ "mean_rate_hz": 4.193,
+ "gain_final": 0.6957,
+ "gain_mean": 0.7166,
+ "synapses_changed": 92,
+ "rewards": 219679,
+ "punishments": 3175,
+ "coverage": 0.042291,
+ "generation": 425,
+ "gains_sha256": "b18d194596356b505f2ef8cb262e5d34fbadb7a2ddb32488007995788cf48f68",
+ "mutation_kept": false,
+ "top_types": [
+  {
+   "type": "L2",
+   "spikes": 410
+  },
+  {
+   "type": "C3",
+   "spikes": 322
+  },
+  {
+   "type": "R1-R6",
+   "spikes": 282
+  },
+  {
+   "type": "L5",
+   "spikes": 275
+  },
+  {
+   "type": "C2",
+   "spikes": 240
+  },
+  {
+   "type": "Tm3",
+   "spikes": 97
+  },
+  {
+   "type": "Dm15",
+   "spikes": 83
+  },
+  {
+   "type": "L4",
+   "spikes": 80
+  }
+ ],
+ "swatches": [
+  "#3ea59f",
+  "#3f97a7",
+  "#41adab",
+  "#43b2af",
+  "#44b5ad",
+  "#44b5b2",
+  "#45b8b5",
+  "#4fbcbb",
+  "#51bdb6",
+  "#53bdb7",
+  "#59c0bc",
+  "#57bfb8"
+ ],
+ "png": "canvas-0479.png",
+ "png_sha256": "e7f1a55647cf4c7c2f2754f3c968bb8b47e553cce10e78af7a8151b8871e3dad",
+ "recording": "recordings/canvas-0479.json",
+ "dataset": "FlyEM male CNS connectome v1.0 (minconf 0.5, traced only)",
+ "surrogate": false,
+ "graph_sha256": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8",
+ "neurons": 165122,
+ "edges": 10228000,
+ "chain": {
+  "network": "robinhood",
+  "contract": "0xa494Fe452526cEf4442c2A5927B3D7749841a611",
+  "token_id": 479,
+  "tx": "7166075265481b47193c3a6ec1f72f9d660cbb661b235e42c0e34394bf59ddf9",
+  "block": 60294476,
+  "owner": "0x2d20fc653dE3Cc10818381312402E46bA6f6b248",
+  "metadata_mode": "site",
+  "image": "https://connectomecanvas.com/nft/canvas-0479.png",
+  "metadata": "https://connectomecanvas.com/nft/479",
+  "metadata_file": "site/nft/479.json",
+  "explorer": "https://robinhoodchain.blockscout.com/tx/7166075265481b47193c3a6ec1f72f9d660cbb661b235e42c0e34394bf59ddf9",
+  "opensea": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/479",
+  "minted_at": 1789133524.7322593,
+  "listing": null
+ },
+ "thumb": "canvas-0479.jpg"
+}

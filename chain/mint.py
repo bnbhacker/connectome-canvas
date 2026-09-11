@@ -100,6 +100,13 @@ def metadata_for(piece: dict, image_uri: str, token_id: int | None = None) -> di
         extra.append({"trait_type": "Generation", "display_type": "number", "value": piece["generation"]})
     if piece.get("coverage") is not None:
         extra.append({"trait_type": "Canvas covered (%)", "value": round(piece["coverage"] * 100, 2)})
+    if piece.get("mirror") is not None:
+        extra.append({"trait_type": "Symmetry", "value": "bilateral" if piece["mirror"] else "one-handed"})
+    if piece.get("hues_used") is not None:
+        extra.append({"trait_type": "Hues used (of 12)", "display_type": "number", "value": piece["hues_used"]})
+    style = piece.get("style") or {}
+    if "hue_offset" in style:
+        extra.append({"trait_type": "Wheel origin (°)", "display_type": "number", "value": int(style["hue_offset"] * 360)})
     return {
         "name": f"Canvas Fly #{token_id}" if token_id is not None else piece["name"],
         "sitting": piece["id"],

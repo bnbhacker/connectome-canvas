@@ -1,0 +1,70 @@
+{
+ "name": "Canvas Fly #351",
+ "description": "Painted by a real fruit-fly nervous system: 165,122 traced neurons of the male Drosophila CNS connectome (Janelia FlyEM, Cambridge Connectomics, Google Research, CC-BY 4.0), simulated as leaky integrate-and-fire units. The retina looked at the canvas, the descending neurons moved the brush, population activity chose the colour. 6.0 s of brain time, 6 strokes, 1,985,159 spikes. Seed 680876143 \u2014 replayable to the pixel with the same graph. Nobody drew this. Watch it being painted: https://connectomecanvas.com/demo#351",
+ "image": "https://connectomecanvas.com/nft/canvas-0351.png",
+ "external_url": "https://connectomecanvas.com/demo#351",
+ "attributes": [
+  {
+   "trait_type": "Sitting",
+   "display_type": "number",
+   "value": 351
+  },
+  {
+   "trait_type": "Generation",
+   "display_type": "number",
+   "value": 297
+  },
+  {
+   "trait_type": "Canvas covered (%)",
+   "value": 3.13
+  },
+  {
+   "trait_type": "Seed",
+   "value": "680876143"
+  },
+  {
+   "trait_type": "Brain time (s)",
+   "value": 6.0
+  },
+  {
+   "trait_type": "Strokes",
+   "value": 6
+  },
+  {
+   "trait_type": "Spikes",
+   "value": 1985159
+  },
+  {
+   "trait_type": "Brush lifts (DNp09)",
+   "value": 6
+  },
+  {
+   "trait_type": "Reversals (MDN)",
+   "value": 0
+  },
+  {
+   "trait_type": "Synapses changed",
+   "value": 75
+  },
+  {
+   "trait_type": "Neurons",
+   "value": 165122
+  },
+  {
+   "trait_type": "Palette",
+   "value": "#65c4c4, #67c3c5, #6cc7c6, #65c4c3, #66c5c2, #6fc3c8"
+  },
+  {
+   "trait_type": "Dataset",
+   "value": "FlyEM male CNS connectome v1.0 (minconf 0.5, traced only)"
+  },
+  {
+   "trait_type": "Graph sha256",
+   "value": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8"
+  },
+  {
+   "trait_type": "PNG sha256",
+   "value": "6d43df310dc26f68fedc5feb6c6af7fd8cb5e4aadd78983e4b35092c57364099"
+  }
+ ]
+}
