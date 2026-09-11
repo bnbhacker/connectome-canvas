@@ -172,5 +172,34 @@
   "png_sha256": "330f1006b64fcb134ac8982ca32b7a4cf0880f854fedcca138d496ce074c3f16",
   "synapses_changed": 0,
   "chain": null
+ },
+ {
+  "id": 7,
+  "name": "Canvas Fly #7",
+  "png": "canvas-0007.png",
+  "thumb": "canvas-0007.jpg",
+  "seed": 3917479192,
+  "recording": "recordings/canvas-0007.json",
+  "strokes": 29,
+  "spikes": 4272218,
+  "brain_ms": 6000.0,
+  "surrogate": false,
+  "swatches": [
+   "#379093",
+   "#4fbcb4",
+   "#53babe",
+   "#63c3c1",
+   "#5cc1b9",
+   "#5dc1bf",
+   "#61b1c3",
+   "#64c4bc",
+   "#5fc2be",
+   "#606ec3",
+   "#5ac0bd",
+   "#5ac0be"
+  ],
+  "png_sha256": "293f1fc8a72c1ea4e1c731ca51953319e229a419b5a9a3ee2b6611b75e763b82",
+  "synapses_changed": 75,
+  "chain": null
  }
 ]
