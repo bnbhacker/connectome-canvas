@@ -11,7 +11,7 @@ network "inspired by" a brain.
 The retina looks at a canvas, all 165,122 neurons integrate, the descending neurons a fly
 walks with move a brush, and the shape of the activity picks the colour. The fly paints
 what it sees and sees what it paints. When a sitting's brain time is spent, the picture is
-hashed, minted as an ERC-721 on Base with the hash and the seed written next to the token,
+hashed, minted as an ERC-721 on Robinhood Chain with the hash and the seed written next to the token,
 and listed on OpenSea. Nobody draws.
 
 Site: `site/` · Studio server: `python run.py serve` · Contract: `contracts/ConnectomeCanvas.sol`
@@ -157,7 +157,7 @@ demonstration and the gallery read `site/recordings/`, and the studio page says 
 brain/      graph.py (release -> graph.npz), sim.py (LIF + adaptation + scaling), retina.py, motor.py,
             palette.py, mushroom.py, surrogate.py
 canvas/     painter.py — the sitting: see / integrate / move / colour / learn / score
-chain/      keystore.py, ipfs.py (Pinata), mint.py (web3, Base), opensea.py (-> tools/list.mjs)
+chain/      keystore.py, deploy.py (py-solc-x), ipfs.py (Pinata), mint.py (web3, Robinhood Chain), opensea.py (-> tools/list.mjs)
 contracts/  ConnectomeCanvas.sol (ERC-721 + ERC-2981, provenance per token), Deploy.s.sol
 site/       the four pages, style.css, common.js, replay.js, recordings/
 server.py   FastAPI: /api/info /api/state /api/frame.png /api/eye.png /api/neurons /api/gallery + static
@@ -170,6 +170,6 @@ Connectome data © HHMI Janelia FlyEM, the Cambridge Connectomics Group and Goog
 CC-BY 4.0 — see `NOTICE`. Model after Shiu et al. 2024 (Nature); retinotopic drive after
 Lappalainen et al. 2024 (Nature). Wiring this connectome to a cursor through DNa02 / DNa01 / MDN /
 DNp09 was done first, openly, by the flybrain project (MIT); this is an independent implementation
-pointed at a canvas. Not affiliated with any of them, nor with OpenSea or Base.
+pointed at a canvas. Not affiliated with any of them, nor with OpenSea or Robinhood.
 
 Connectome Canvas is an art experiment, not an investment.

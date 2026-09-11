@@ -1,1 +1,1 @@
-"""Connectome Canvas — the chain half: keystore, IPFS pinning, minting on Base, OpenSea listing."""
+"""Connectome Canvas — the chain half: keystore, metadata (site or IPFS), minting on Robinhood Chain, OpenSea."""

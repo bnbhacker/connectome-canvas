@@ -4,8 +4,8 @@ Mint a finished piece as an ERC-721.
     python run.py mint 12            # dry run: builds the metadata, pins nothing, signs nothing
     python run.py mint 12 --live     # publishes metadata, mints, records tx and token id
 
-Networks: robinhood (Robinhood Chain, id 4663 — gas costs a fraction of a cent),
-base, base-sepolia. Metadata can live in two places:
+Network: Robinhood Chain (id 4663), where gas costs a fraction of a cent and
+which OpenSea indexes under the slug `robinhood`. Metadata can live in two places:
 
     CANVAS_METADATA=site   (default) image + JSON served from the site itself
                            (site/nft/, published with the next `run.py publish`)
@@ -42,20 +42,6 @@ NETWORKS = {
         "explorer": "https://robinhoodchain.blockscout.com",
         "opensea": os.environ.get("CANVAS_OPENSEA_BASE", "https://opensea.io/assets/robinhood"),
         "legacy_gas": True,
-    },
-    "base": {
-        "chain_id": 8453,
-        "rpc": os.environ.get("CANVAS_RPC", "https://mainnet.base.org"),
-        "explorer": "https://basescan.org",
-        "opensea": "https://opensea.io/assets/base",
-        "legacy_gas": False,
-    },
-    "base-sepolia": {
-        "chain_id": 84532,
-        "rpc": os.environ.get("CANVAS_RPC", "https://sepolia.base.org"),
-        "explorer": "https://sepolia.basescan.org",
-        "opensea": "https://testnets.opensea.io/assets/base_sepolia",
-        "legacy_gas": False,
     },
 }
 

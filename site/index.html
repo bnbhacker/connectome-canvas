@@ -205,9 +205,7 @@
     $("s-edges").textContent = CC.fmt(info.edges);
     $("v-n").textContent = CC.fmt(info.neurons);
     $("v-budget").textContent = (info.canvas.budget_ticks * info.canvas.tick_ms / 1000).toFixed(1);
-    const OS = { robinhood: ["https://opensea.io/assets/robinhood/", "Robinhood Chain · id 4663"],
-                 base: ["https://opensea.io/assets/base/", "Base · id 8453"],
-                 "base-sepolia": ["https://testnets.opensea.io/assets/base_sepolia/", "Base Sepolia · id 84532"] };
+    const OS = { robinhood: ["https://opensea.io/assets/robinhood/", "Robinhood Chain · id 4663"] };
     if (info.contract) {
       $("c-addr").textContent = info.contract; $("c-copy").hidden = false;
       $("c-copy").onclick = () => CC.copy(info.contract, $("c-copy"));
@@ -237,7 +235,7 @@
     const p = index[0];
     let score;
     try { score = await getJSON("recordings/" + p.recording.split("/").pop()); } catch (e) { return; }
-    frame.hidden = true; const cv = $("replaycv"); cv.hidden = false;
+    frame.style.display = "none"; const cv = $("replaycv"); cv.hidden = false; cv.style.display = "block";
     stage.classList.remove("idle");
     document.querySelector(".stage .tag").textContent = `recorded sitting #${p.id} · replayed`;
     $("s-sitting").textContent = "#" + p.id; $("s-neurons").textContent = CC.fmt(score.piece.neurons); $("s-edges").textContent = CC.fmt(score.piece.edges);

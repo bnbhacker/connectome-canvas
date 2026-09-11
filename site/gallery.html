@@ -45,20 +45,20 @@
   const $ = id => document.getElementById(id);
   async function getJSON(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); return r.json(); }
 
-  let items = [], imgBase = "gallery/";
+  let items = [], imgDir = "gallery/";
   try {
     items = await getJSON("api/gallery");
     $("s-src").textContent = "live from the studio";
   } catch (e) {
     // static hosting: fall back to the recordings index, thumbnails included
-    try { items = await getJSON("recordings/index.json"); imgBase = "recordings/"; $("s-src").textContent = "static · from recordings"; }
+    try { items = await getJSON("recordings/index.json"); imgDir = "recordings/"; $("s-src").textContent = "static · from recordings"; }
     catch (e2) { $("grid").innerHTML = '<div class="empty">no pieces yet</div>'; return; }
   }
   items.sort((a, b) => b.id - a.id);
 
   function card(p) {
     const ch = p.chain || {};
-    const img = imgBase === "gallery/" ? "gallery/" + p.png : "recordings/" + (p.thumb || p.png);
+    const img = imgDir === "gallery/" ? "gallery/" + p.png : "recordings/" + (p.thumb || p.png);
     const status = ch.listing ? `<span class="status listed">listed · ${ch.listing.price_eth} ETH</span>`
       : ch.token_id != null ? `<span class="status minted">minted · token ${ch.token_id}</span>`
       : `<span class="status">${p.surrogate ? "surrogate · not minted" : "awaiting mint"}</span>`;
@@ -75,7 +75,7 @@
           ${ch.opensea ? `<a href="${ch.opensea}" target="_blank" rel="noopener">opensea ↗</a>` : ""}
           ${ch.explorer ? `<a href="${ch.explorer}" target="_blank" rel="noopener" class="mute">tx ↗</a>` : ""}
           ${ch.image_cid ? `<a href="https://gateway.pinata.cloud/ipfs/${ch.image_cid}" target="_blank" rel="noopener" class="mute">ipfs ↗</a>` : ""}
-          ${imgBase === "gallery/" ? `<a href="gallery/${p.png}" target="_blank" class="mute">png ↗</a>` : ""}
+          ${imgDir === "gallery/" ? `<a href="gallery/${p.png}" target="_blank" class="mute">png ↗</a>` : ""}
         </div>
       </div></div>`;
   }

@@ -9,5 +9,5 @@ requests==2.34.2
 fastapi==0.128.0
 uvicorn[standard]==0.40.0
 
-web3==7.16.0             # mint on Base
+web3==7.16.0             # deploy + mint on Robinhood Chain
 eth-account==0.13.7      # encrypted keystore, signing

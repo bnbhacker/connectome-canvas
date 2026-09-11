@@ -160,7 +160,7 @@ def main() -> None:
     p.add_argument("--days", type=int, default=30)
 
     p = sub.add_parser("deploy", help="compile with py-solc-x and deploy ConnectomeCanvas.sol")
-    p.add_argument("--network", default="robinhood", choices=["robinhood", "base", "base-sepolia"])
+    p.add_argument("--network", default="robinhood", choices=["robinhood"])
     p.add_argument("--keeper", default=None, help="owner wallet: manages the collection, gets royalties (default: CANVAS_OWNER)")
     p.add_argument("--royalty", default=None, help="royalty receiver (default: the keeper)")
     p.add_argument("--live", action="store_true", help="broadcast; default is a dry run with a gas estimate")

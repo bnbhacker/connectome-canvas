@@ -54,7 +54,7 @@ def new_keystore(path: Path | None = None) -> str:
         pass
     print(f"painter address: {acct.address}")
     print(f"keystore:        {path}")
-    print("fund it with a little ETH on Base for gas, and set CANVAS_CONTRACT once the contract is deployed.")
+    print("fund it with a little ETH on Robinhood Chain for gas, and set CANVAS_CONTRACT once the contract is deployed.")
     return acct.address
 
 
