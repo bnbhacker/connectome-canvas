@@ -1,1 +1,31 @@
-[]
+[
+ {
+  "id": 1,
+  "name": "Connectome Canvas #1",
+  "png": "canvas-0001.png",
+  "thumb": "canvas-0001.jpg",
+  "seed": 912782867,
+  "recording": "recordings/canvas-0001.json",
+  "strokes": 23,
+  "spikes": 3885254,
+  "brain_ms": 6000.0,
+  "surrogate": false,
+  "swatches": [
+   "#58bfba",
+   "#5fc2bd",
+   "#66c4c5",
+   "#68c1c5",
+   "#5e87c2",
+   "#528abd",
+   "#52bbbd",
+   "#53bdbd",
+   "#4fbcb9",
+   "#4eb5bc",
+   "#4ebbb8",
+   "#4fbcb6"
+  ],
+  "png_sha256": "45619af19c86938a3411258f58ebd89da4d7750c5b0f115a5f87cfc31173aa2e",
+  "synapses_changed": 3,
+  "chain": null
+ }
+]
