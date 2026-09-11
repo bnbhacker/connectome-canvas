@@ -200,6 +200,7 @@ def cmd_deploy(args: argparse.Namespace) -> None:
 def cmd_publish(args: argparse.Namespace) -> None:
     """Copy site/ to an ASCII path (Vercel chokes on non-ASCII paths on Windows) and deploy it."""
     import json
+    import os
     import shutil
     import subprocess
     import tempfile
@@ -210,33 +211,52 @@ def cmd_publish(args: argparse.Namespace) -> None:
     else:
         tmp = Path(tempfile.gettempdir())
         stage = (tmp if str(tmp).isascii() else Path("C:/Users/Public" if sys.platform == "win32" else "/tmp")) / "cc-site"
-    link = stage / ".vercel" / "project.json"
-    saved_link = link.read_text(encoding="utf-8") if link.exists() else None
     import time
-    for attempt in range(5):                     # Windows may still hold a handle from the previous deploy
+    link_src = next((p / ".vercel" / "project.json" for p in [stage] + [stage.with_name(f"{stage.name}-{k}") for k in range(2, 6)]
+                     if (p / ".vercel" / "project.json").exists()), None)
+    saved_link = link_src.read_text(encoding="utf-8") if link_src else None
+    # a hung earlier deploy can hold the stage directory: fall through cc-site, cc-site-2, ... rather than wait on it
+    chosen = None
+    for k in range(1, 6):
+        cand = stage if k == 1 else stage.with_name(f"{stage.name}-{k}")
         try:
-            if stage.exists():
-                shutil.rmtree(stage)
+            if cand.exists():
+                shutil.rmtree(cand)
+            chosen = cand
             break
         except PermissionError:
-            if attempt == 4:
-                raise
-            time.sleep(2.0)
+            time.sleep(1.0)
+    if chosen is None:
+        raise SystemExit("every stage directory is locked by an earlier deploy; kill stale `vercel` processes")
+    stage = chosen
     shutil.copytree(ROOT / "site", stage)
     if saved_link:                       # keep the project link so --yes never guesses
-        link.parent.mkdir(parents=True, exist_ok=True)
-        link.write_text(saved_link, encoding="utf-8")
+        (stage / ".vercel").mkdir(parents=True, exist_ok=True)
+        (stage / ".vercel" / "project.json").write_text(saved_link, encoding="utf-8")
     print(f"staged site/ -> {stage}")
     cmd = ["vercel", "--prod", "--yes", "--name", "connectome-canvas"]
     if args.scope:
         cmd += ["--scope", args.scope]
     print(" ".join(cmd))
-    proc = subprocess.run(cmd, cwd=stage, shell=(sys.platform == "win32"), capture_output=True, text=True)
-    tail = (proc.stdout + proc.stderr).strip().splitlines()[-6:]
-    print("\n".join(tail))
+    timeout_s = int(os.environ.get("CANVAS_PUBLISH_TIMEOUT_S", "540"))
+    proc = subprocess.Popen(cmd, cwd=stage, shell=(sys.platform == "win32"), stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+    try:
+        out, _ = proc.communicate(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        # kill the whole tree (the shell, node, its helpers); a lone .kill() would orphan node
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
+        else:
+            proc.kill()
+        raise SystemExit(f"vercel did not finish within {timeout_s} s; killed")
+    lines = (out or "").strip().splitlines()
+    print("\n".join(lines[-6:]))
     if proc.returncode != 0:
         raise SystemExit(f"vercel exited with {proc.returncode}")
-    ok = any("Ready" in line or "ready" in line or "https://" in line for line in tail)
+    # with stdout piped, vercel prints its progress on stderr and a JSON "next steps" block last on stdout,
+    # so the proof of a deployment (an https URL / "Aliased" / "Ready") can sit anywhere in the output
+    ok = any(("https://" in line and "vercel" in line) or "Aliased" in line or "Ready" in line for line in lines)
     if not ok:
         raise SystemExit("vercel produced no deployment URL")
 

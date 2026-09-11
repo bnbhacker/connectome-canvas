@@ -1,0 +1,105 @@
+{
+ "id": 587,
+ "name": "Canvas Fly #587",
+ "seed": 3215718904,
+ "finished_at": 1789138868.5699868,
+ "wall_seconds": 29.7,
+ "brain_ms": 6000.0,
+ "ticks": 600,
+ "strokes": 24,
+ "lifts": 25,
+ "reversals": 3,
+ "bumps": 7,
+ "path_px": 6049.4,
+ "spikes": 3635704,
+ "mean_rate_hz": 3.67,
+ "gain_final": 0.7481,
+ "gain_mean": 0.7486,
+ "synapses_changed": 75,
+ "rewards": 275592,
+ "punishments": 3924,
+ "coverage": 0.041548,
+ "fitness": 0.068214,
+ "hues_used": 8,
+ "generation": 533,
+ "gains_sha256": "cd25c446758297d34da2c1aa1c82c1d4656a46ea7fe018bfcfe291375f4d1924",
+ "mutation_kept": false,
+ "style": {
+  "turn_gain": 0.0703,
+  "inertia": 0.2405,
+  "step_gain": 42.8922,
+  "width_gain": 27.6225,
+  "lift_hz": 14.4146,
+  "mirror": 0.4021,
+  "hue_offset": 0.4608,
+  "hue_spread": 0.65,
+  "sat_base": 0.44,
+  "paper_hue": 0.62,
+  "paper_sat": 0.3524,
+  "paper_light": 0.1193
+ },
+ "mirror": false,
+ "paper": [
+  19,
+  25,
+  41
+ ],
+ "top_types": [
+  {
+   "type": "KCg-m",
+   "spikes": 490
+  },
+  {
+   "type": "KCab-c",
+   "spikes": 231
+  },
+  {
+   "type": "R1-R6",
+   "spikes": 229
+  },
+  {
+   "type": "KCab-m",
+   "spikes": 148
+  },
+  {
+   "type": "C2",
+   "spikes": 147
+  },
+  {
+   "type": "C3",
+   "spikes": 146
+  },
+  {
+   "type": "L5",
+   "spikes": 123
+  },
+  {
+   "type": "KCab-p",
+   "spikes": 62
+  }
+ ],
+ "swatches": [
+  "#51ae96",
+  "#4eaea6",
+  "#53b17f",
+  "#4ead7c",
+  "#50b0a1",
+  "#4dab5c",
+  "#4faf4f",
+  "#58ac4e",
+  "#51b099",
+  "#4fae7f",
+  "#4eae7e",
+  "#65b153"
+ ],
+ "png": "canvas-0587.png",
+ "png_sha256": "1e03c308b61694b337f866c410c598ff58a85ec42da5c697ad42ecf5d47189f5",
+ "recording": "recordings/canvas-0587.json",
+ "dataset": "FlyEM male CNS connectome v1.0 (minconf 0.5, traced only)",
+ "surrogate": false,
+ "graph_sha256": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8",
+ "neurons": 165122,
+ "edges": 10228000,
+ "chain": null,
+ "thumb": "canvas-0587.jpg"
+}

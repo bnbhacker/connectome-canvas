@@ -123,7 +123,10 @@ class Painter:
         self.sub_xyz = self._positions(self.subsample)
 
         self.lock = threading.Lock()
-        self.events: deque = deque(maxlen=200)
+        self.events: deque = deque(maxlen=400)
+        # the chain / publish / evolution story, kept apart from the brush chatter so it cannot be pushed out
+        self.chain_log: deque = deque(maxlen=60)
+        self.CHAIN_KINDS = {"mint", "publish", "list", "error", "tunnel", "evolve", "session", "finished", "rest"}
         self.session: Session | None = None
         self.img: Image.Image | None = None
         self.lum: np.ndarray | None = None
@@ -243,7 +246,10 @@ class Painter:
         if min_gap_s and now - self._last_event_kind.get(kind, 0) < min_gap_s:
             return
         self._last_event_kind[kind] = now
-        self.events.appendleft({"t": now, "kind": kind, "text": text})
+        ev = {"t": now, "kind": kind, "text": text}
+        self.events.appendleft(ev)
+        if kind in self.CHAIN_KINDS:
+            self.chain_log.appendleft(ev)
 
     def new_session(self, seed: int | None = None) -> Session:
         with self.lock:
@@ -602,5 +608,6 @@ class Painter:
             "evolution": self.evolution.summary(),
             "fired": [int(i) for i in self.last_fired_sub],
             "events": list(self.events)[:40],
+            "chain_log": list(self.chain_log)[:30],
             "gallery_count": len(self._read_index()),
         }
