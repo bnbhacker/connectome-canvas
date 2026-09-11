@@ -42,11 +42,13 @@ class Studio:
     """Sittings, one after another, forever."""
 
     def __init__(self, painter: Painter, pause_s: float = 20.0, mint: bool = False, list_eth: str | None = None,
-                 max_sittings: int = 0):
+                 max_sittings: int = 0, list_currency: str | None = None):
         self.painter = painter
         self.pause_s = pause_s
         self.mint = mint and not painter.brain.surrogate
-        self.list_eth = list_eth
+        self.list_eth = list_eth                  # the listing price, in units of list_currency
+        self.list_currency = list_currency or "ETH"
+        self._list_paused_until = 0.0             # set when OpenSea wants another currency; re-checked later
         self.max_sittings = max_sittings          # 0 = paint forever; N = paint N sittings, then rest
         self.done = 0
         self.resting = False
@@ -169,16 +171,24 @@ class Studio:
         """List every minted-but-unlisted piece, oldest first, a few per pass; failures are retried next time."""
         import json as _json
         from chain.opensea import list_piece
+        if time.time() < self._list_paused_until:
+            return
         index = self.painter._read_index()
         todo = [p for p in index if (p.get("chain") or {}).get("token_id") is not None
                 and not (p.get("chain") or {}).get("listing") and (p.get("chain") or {}).get("list_attempts", 0) < 8]
         for p in todo[:min(max_per_pass, self._list_budget())]:
             self._list_posts.append(time.time())
             try:
-                self.painter.event("list", f"listing #{p['id']} (token {p['chain']['token_id']}) at {self.list_eth} ETH …")
-                listing = list_piece(p["id"], self.list_eth)
+                self.painter.event("list", f"listing #{p['id']} (token {p['chain']['token_id']}) at {self.list_eth} {self.list_currency} …")
+                listing = list_piece(p["id"], self.list_eth, currency=self.list_currency)
                 self.painter.event("list", f"listed #{p['id']} · {listing.get('url', '')}")
             except BaseException as e:  # SystemExit included: OpenSea may not have indexed the token yet
+                if "requires this collection to be priced in" in str(e):
+                    # the currency is a person's decision: never convert, never burn retries on it; look again in 10 min
+                    self._list_paused_until = time.time() + 600
+                    self._list_posts.pop()            # a refusal like this is not worth a slot in the hourly budget
+                    self.painter.event("error", f"automatic listing paused, re-checking in 10 min: {str(e)[:240]}", 540)
+                    break
                 gp = GALLERY / f"canvas-{p['id']:04d}.json"
                 try:
                     piece = _json.loads(gp.read_text(encoding="utf-8"))
@@ -285,7 +295,8 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
                       gains_path=gains if gains.exists() else None)
     studio = Studio(painter, pause_s=float(os.environ.get("CANVAS_PAUSE_S", 20)),
                     mint=os.environ.get("CANVAS_MINT", "0") == "1",
-                    list_eth=os.environ.get("CANVAS_LIST_ETH") or None,
+                    list_eth=os.environ.get("CANVAS_LIST_PRICE") or os.environ.get("CANVAS_LIST_ETH") or None,
+                    list_currency=os.environ.get("CANVAS_LIST_CURRENCY") or ("ETH" if os.environ.get("CANVAS_LIST_ETH") else None),
                     max_sittings=_env_int("CANVAS_SITTINGS", 0) or _env_int("CANVAS_MAX_SUPPLY", 5000))
 
     app = FastAPI(title="Canvas Fly", docs_url=None, redoc_url=None)
@@ -341,6 +352,7 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
         d["sittings_done"] = studio.done
         d["sittings_max"] = studio.max_sittings
         d["list_eth"] = studio.list_eth
+        d["list_currency"] = studio.list_currency
         d["now"] = time.time()
         return JSONResponse(d, headers={"Cache-Control": "no-store"})
 

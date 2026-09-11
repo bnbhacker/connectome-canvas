@@ -114,33 +114,57 @@ def cmd_mint(args: argparse.Namespace) -> None:
 def cmd_list(args: argparse.Namespace) -> None:
     from chain.opensea import list_piece
     import json
-    print(json.dumps(list_piece(args.id, args.price, days=args.days, dry_run=args.dry_run), indent=1, default=str))
+    print(json.dumps(list_piece(args.id, args.price, days=args.days, dry_run=args.dry_run, currency=args.currency),
+                     indent=1, default=str))
 
 
 def cmd_sweep(args: argparse.Namespace) -> None:
-    """Send the painter wallet's ETH (minus a gas reserve) to the keeper."""
+    """Send the painter's sale proceeds to the keeper: the listing currency (an ERC-20 on Robinhood Chain)
+    and any ETH above a gas reserve. Dry run unless --live."""
+    import os
     from web3 import Web3
     from chain.keystore import load_account
     from chain.mint import NETWORKS
+    from chain.opensea import CURRENCIES, ERC20_ABI, is_native
     net = NETWORKS["robinhood"]
-    keeper = Web3.to_checksum_address(args.to or __import__("os").environ.get("CANVAS_OWNER", ""))
+    keeper = Web3.to_checksum_address(args.to or os.environ.get("CANVAS_OWNER", ""))
     acct = load_account()
     w3 = Web3(Web3.HTTPProvider(net["rpc"], request_kwargs={"timeout": 60}))
+    gas_price = int(w3.eth.gas_price * 1.2)
+    plan = []
+    for addr in CURRENCIES.get("robinhood", {}).values():       # every listing currency, e.g. USDG
+        if is_native(addr):
+            continue
+        t = w3.eth.contract(address=Web3.to_checksum_address(addr), abi=ERC20_ABI)
+        held, sym, dec = t.functions.balanceOf(acct.address).call(), t.functions.symbol().call(), t.functions.decimals().call()
+        print(f"painter {acct.address}: {held / 10 ** dec:.6f} {sym}")
+        if held > 0:
+            plan.append(("token", t, held, sym, dec))
     bal = w3.eth.get_balance(acct.address)
     reserve = Web3.to_wei(str(args.reserve), "ether")
-    amount = bal - reserve
-    print(f"painter {acct.address}: {bal / 1e18:.6f} ETH, reserve {args.reserve} ETH -> send {max(0, amount) / 1e18:.6f} ETH to {keeper}")
-    if amount <= 0:
+    eth_out = bal - reserve - 21000 * gas_price
+    print(f"painter {acct.address}: {bal / 1e18:.6f} ETH, reserve {args.reserve} ETH -> ETH to send {max(0, eth_out) / 1e18:.6f}")
+    if eth_out > 0:
+        plan.append(("eth", None, eth_out, "ETH", 18))
+    if not plan:
+        print("nothing to sweep")
         return
+    print("to " + keeper + ": " + ", ".join(f"{amt / 10 ** dec:.6f} {sym}" for _, _, amt, sym, dec in plan))
     if not args.live:
         print("dry run; add --live to send")
         return
-    gas_price = int(w3.eth.gas_price * 1.2)
-    tx = {"to": keeper, "value": amount - 21000 * gas_price, "gas": 21000, "gasPrice": gas_price,
-          "nonce": w3.eth.get_transaction_count(acct.address), "chainId": net["chain_id"]}
-    h = w3.eth.send_raw_transaction(acct.sign_transaction(tx).raw_transaction)
-    rc = w3.eth.wait_for_transaction_receipt(h, timeout=240)
-    print(f"sent: {net['explorer']}/tx/{h.hex()} status={rc.status}")
+    nonce = w3.eth.get_transaction_count(acct.address, "pending")
+    for kind, t, amt, sym, dec in plan:
+        if kind == "token":
+            tx = t.functions.transfer(keeper, amt).build_transaction(
+                {"from": acct.address, "nonce": nonce, "chainId": net["chain_id"], "gasPrice": gas_price})
+            tx["gas"] = int(w3.eth.estimate_gas(tx) * 1.2)
+        else:
+            tx = {"to": keeper, "value": amt, "gas": 21000, "gasPrice": gas_price, "nonce": nonce, "chainId": net["chain_id"]}
+        h = w3.eth.send_raw_transaction(acct.sign_transaction(tx).raw_transaction)
+        rc = w3.eth.wait_for_transaction_receipt(h, timeout=240)
+        print(f"sent {amt / 10 ** dec:.6f} {sym}: {net['explorer']}/tx/{h.hex()} status={rc.status}")
+        nonce += 1
 
 
 def cmd_mint_all(args: argparse.Namespace) -> None:
@@ -253,7 +277,8 @@ def main() -> None:
 
     p = sub.add_parser("list")
     p.add_argument("id", type=int)
-    p.add_argument("--price", required=True, help="ETH")
+    p.add_argument("--price", required=True, help="in units of --currency")
+    p.add_argument("--currency", default=None, help="ETH (native), USDG, or a 0x token; default CANVAS_LIST_CURRENCY, then ETH")
     p.add_argument("--days", type=int, default=30)
     p.add_argument("--dry-run", action="store_true", help="build and sign the Seaport order, post nothing")
 
