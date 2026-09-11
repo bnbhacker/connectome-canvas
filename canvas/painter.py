@@ -45,6 +45,7 @@ NOISE_FRACTION = 0.001 # neurons per step that receive a 2 mV background kick
 NOISE_MV = 2.0
 SUBSAMPLE = 2000       # neurons shown in the scatter / recorded per window
 FIRED_PER_TICK = 90    # how many fired-subsample indices to keep per window in the score
+KEEP_SCORES = 200      # replayable scores kept on the site; older sittings keep thumbnail + provenance
 
 # Homeostat: hold the population mean rate inside a physiological band by nudging
 # the one global gain. Real cortex-like rates for a fly are a few Hz on average.
@@ -436,12 +437,21 @@ class Painter:
             index = [p for p in index if p["id"] != s.id] + [piece]
             index.sort(key=lambda p: p["id"])
             self._write_index(index)
+            # keep the heavy scores only for the most recent sittings (the site would otherwise grow by
+            # ~140 KB per piece); thumbnails and provenance stay for every piece
+            keep = sorted((p["id"] for p in index), reverse=True)[:KEEP_SCORES]
+            for p in index:
+                if p["id"] not in keep:
+                    old = self.recordings / f"canvas-{p['id']:04d}.json"
+                    if old.exists():
+                        old.unlink()
             rec_index = [{"id": p["id"], "name": p["name"], "png": p["png"], "thumb": p.get("thumb"), "seed": p["seed"],
-                          "recording": p["recording"], "strokes": p["strokes"], "spikes": p["spikes"],
+                          "recording": p["recording"] if (self.recordings / Path(p["recording"]).name).exists() else None,
+                          "strokes": p["strokes"], "spikes": p["spikes"],
                           "brain_ms": p["brain_ms"], "surrogate": p["surrogate"], "swatches": p["swatches"],
                           "png_sha256": p.get("png_sha256"), "synapses_changed": p.get("synapses_changed"),
                           "chain": p.get("chain")}
-                         for p in index if (self.recordings / Path(p["recording"]).name).exists()]
+                         for p in index]
             (self.recordings / "index.json").write_text(json.dumps(rec_index, indent=1), encoding="utf-8")
             self.finished.append(piece)
             self.event("finished", f"sitting #{s.id} finished · {s.strokes} strokes · {s.spikes:,} spikes · sha {png_sha[:10]}…")

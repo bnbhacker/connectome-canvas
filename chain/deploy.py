@@ -101,9 +101,12 @@ def deploy(network: str, keeper: str | None = None, royalty: str | None = None, 
     if w3.eth.chain_id != net["chain_id"]:
         raise SystemExit(f"rpc is chain {w3.eth.chain_id}, expected {net['chain_id']}")
 
+    max_supply = int(os.environ.get("CANVAS_MAX_SUPPLY", "5000"))
+    base_uri = os.environ.get("CANVAS_BASE_URI") or (os.environ.get("CANVAS_SITE_URL", "https://connectomecanvas.com").rstrip("/") + "/nft/")
+    print(f"maxSupply {max_supply} · baseURI {base_uri}")
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
     gas_price = w3.eth.gas_price
-    tx = contract.constructor(keeper_addr, painter, royalty_addr).build_transaction({
+    tx = contract.constructor(keeper_addr, painter, royalty_addr, max_supply, base_uri).build_transaction({
         "from": painter,
         "nonce": w3.eth.get_transaction_count(painter),
         "chainId": net["chain_id"],
@@ -117,7 +120,7 @@ def deploy(network: str, keeper: str | None = None, royalty: str | None = None, 
     print(f"gas ≈ {gas:,} at {tx['gasPrice'] / 1e9:.4f} gwei → ≈ {cost_eth:.6f} ETH · painter balance {balance:.6f} ETH")
     if dry_run:
         return {"dry_run": True, "network": network, "keeper": keeper_addr, "painter": painter, "royalty": royalty_addr,
-                "gas": gas, "cost_eth": cost_eth, "balance_eth": balance}
+                "max_supply": max_supply, "base_uri": base_uri, "gas": gas, "cost_eth": cost_eth, "balance_eth": balance}
     if balance < cost_eth:
         raise SystemExit("not enough ETH on the painter wallet for gas")
 
@@ -130,7 +133,7 @@ def deploy(network: str, keeper: str | None = None, royalty: str | None = None, 
     address = receipt.contractAddress
     result = {
         "network": network, "chain_id": net["chain_id"], "contract": address, "keeper": keeper_addr, "painter": painter,
-        "royalty": royalty_addr, "tx": tx_hash.hex(), "block": receipt.blockNumber,
+        "royalty": royalty_addr, "max_supply": max_supply, "base_uri": base_uri, "tx": tx_hash.hex(), "block": receipt.blockNumber,
         "explorer": f"{net['explorer']}/address/{address}", "deployed_at": time.time(),
     }
     (ROOT / "build" / f"deploy-{network}.json").write_text(json.dumps(result, indent=1), encoding="utf-8")

@@ -3,6 +3,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/nft/:id(\\d+)", "destination": "/nft/:id.json" },
     { "source": "/api/:path*", "destination": "https://studio.connectomecanvas.com/api/:path*" },
     { "source": "/gallery/:path*", "destination": "https://studio.connectomecanvas.com/gallery/:path*" }
   ],

@@ -165,6 +165,7 @@
 
   let index = [];
   try { index = await getJSON("recordings/index.json"); } catch (e) {}
+  index = index.filter(p => p.recording);          // older sittings keep thumbnail + provenance only
   index.sort((a, b) => b.id - a.id);
   if (!index.length) {
     $("pick-note").textContent = "no recordings yet — run `python run.py paint` once and reload";

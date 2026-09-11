@@ -24,6 +24,24 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 
+def load_dotenv(path: Path = ROOT / ".env") -> None:
+    """Read KEY=VALUE lines from .env (never committed) into the environment, without overriding what is set."""
+    import os
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.split(" #", 1)[0].strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_dotenv()
+
+
 def cmd_paint(args: argparse.Namespace) -> None:
     from brain.sim import Brain, resolve_graph
     from canvas.painter import Painter
@@ -96,7 +114,33 @@ def cmd_mint(args: argparse.Namespace) -> None:
 def cmd_list(args: argparse.Namespace) -> None:
     from chain.opensea import list_piece
     import json
-    print(json.dumps(list_piece(args.id, args.price, days=args.days), indent=1))
+    print(json.dumps(list_piece(args.id, args.price, days=args.days, dry_run=args.dry_run), indent=1, default=str))
+
+
+def cmd_sweep(args: argparse.Namespace) -> None:
+    """Send the painter wallet's ETH (minus a gas reserve) to the keeper."""
+    from web3 import Web3
+    from chain.keystore import load_account
+    from chain.mint import NETWORKS
+    net = NETWORKS["robinhood"]
+    keeper = Web3.to_checksum_address(args.to or __import__("os").environ.get("CANVAS_OWNER", ""))
+    acct = load_account()
+    w3 = Web3(Web3.HTTPProvider(net["rpc"], request_kwargs={"timeout": 60}))
+    bal = w3.eth.get_balance(acct.address)
+    reserve = Web3.to_wei(str(args.reserve), "ether")
+    amount = bal - reserve
+    print(f"painter {acct.address}: {bal / 1e18:.6f} ETH, reserve {args.reserve} ETH -> send {max(0, amount) / 1e18:.6f} ETH to {keeper}")
+    if amount <= 0:
+        return
+    if not args.live:
+        print("dry run; add --live to send")
+        return
+    gas_price = int(w3.eth.gas_price * 1.2)
+    tx = {"to": keeper, "value": amount - 21000 * gas_price, "gas": 21000, "gasPrice": gas_price,
+          "nonce": w3.eth.get_transaction_count(acct.address), "chainId": net["chain_id"]}
+    h = w3.eth.send_raw_transaction(acct.sign_transaction(tx).raw_transaction)
+    rc = w3.eth.wait_for_transaction_receipt(h, timeout=240)
+    print(f"sent: {net['explorer']}/tx/{h.hex()} status={rc.status}")
 
 
 def cmd_deploy(args: argparse.Namespace) -> None:
@@ -187,6 +231,12 @@ def main() -> None:
     p.add_argument("id", type=int)
     p.add_argument("--price", required=True, help="ETH")
     p.add_argument("--days", type=int, default=30)
+    p.add_argument("--dry-run", action="store_true", help="build and sign the Seaport order, post nothing")
+
+    p = sub.add_parser("sweep", help="send the painter's ETH (sales proceeds) to the keeper")
+    p.add_argument("--to", default=None, help="keeper address (default CANVAS_OWNER)")
+    p.add_argument("--reserve", default="0.01", help="ETH to leave for gas")
+    p.add_argument("--live", action="store_true")
 
     p = sub.add_parser("deploy", help="compile with py-solc-x and deploy ConnectomeCanvas.sol")
     p.add_argument("--network", default="robinhood", choices=["robinhood"])
@@ -207,7 +257,8 @@ def main() -> None:
         print(f"wrote {build()} (surrogate, not a fly)")
     else:
         {"paint": cmd_paint, "replay": cmd_replay, "serve": cmd_serve, "wallet": cmd_wallet,
-         "mint": cmd_mint, "list": cmd_list, "deploy": cmd_deploy, "publish": cmd_publish}[args.cmd](args)
+         "mint": cmd_mint, "list": cmd_list, "deploy": cmd_deploy, "publish": cmd_publish,
+         "sweep": cmd_sweep}[args.cmd](args)
 
 
 if __name__ == "__main__":

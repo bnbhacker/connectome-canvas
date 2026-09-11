@@ -15,8 +15,9 @@ Either way the PNG's SHA-256 and the sitting's seed go on chain next to the
 token via `mint(to, uri, pngSha256, seed)`, so provenance is checkable against
 the block, not against a URL.
 
-CANVAS_OWNER is the address that receives the token (default: the painter
-wallet). Point it at your own wallet to list by hand on OpenSea.
+Tokens are minted to the painter wallet so the studio can list them on OpenSea
+itself; CANVAS_MINT_TO sends them somewhere else (e.g. the keeper, to list by hand).
+The contract stops at its maxSupply (5 000): mint refuses once it is sold out.
 
 A piece painted on a surrogate graph is refused: it is not a fly.
 """
@@ -47,11 +48,16 @@ NETWORKS = {
 
 ABI = [
     {"type": "function", "name": "mint", "stateMutability": "nonpayable",
-     "inputs": [{"name": "to", "type": "address"}, {"name": "uri", "type": "string"},
-                {"name": "pngSha256", "type": "bytes32"}, {"name": "seed", "type": "uint64"}],
+     "inputs": [{"name": "to", "type": "address"}, {"name": "pngSha256", "type": "bytes32"}, {"name": "seed", "type": "uint64"}],
      "outputs": [{"name": "id", "type": "uint256"}]},
     {"type": "function", "name": "nextId", "stateMutability": "view", "inputs": [],
      "outputs": [{"name": "", "type": "uint256"}]},
+    {"type": "function", "name": "maxSupply", "stateMutability": "view", "inputs": [],
+     "outputs": [{"name": "", "type": "uint256"}]},
+    {"type": "function", "name": "totalMinted", "stateMutability": "view", "inputs": [],
+     "outputs": [{"name": "", "type": "uint256"}]},
+    {"type": "function", "name": "tokenURI", "stateMutability": "view", "inputs": [{"name": "tokenId", "type": "uint256"}],
+     "outputs": [{"name": "", "type": "string"}]},
     {"type": "event", "name": "Transfer", "anonymous": False,
      "inputs": [{"indexed": True, "name": "from", "type": "address"},
                 {"indexed": True, "name": "to", "type": "address"},
@@ -117,21 +123,21 @@ def metadata_for(piece: dict, image_uri: str) -> dict:
     }
 
 
-def publish_metadata(piece: dict, png_path: Path, mode: str) -> tuple[str, str, dict]:
-    """Returns (image_uri, metadata_uri, extra) for the chosen metadata mode."""
+def publish_metadata(piece: dict, png_path: Path, mode: str, token_id: int) -> tuple[str, str, dict]:
+    """Write the token's metadata where `baseURI + tokenId` will find it. Returns (image_uri, metadata_uri, extra)."""
     if mode == "ipfs":
         from .ipfs import pin_file, pin_json
         image_cid = pin_file(png_path, piece["png"])
         meta = metadata_for(piece, f"ipfs://{image_cid}")
         meta_cid = pin_json(meta, f"{piece['png']}.json")
         return f"ipfs://{image_cid}", f"ipfs://{meta_cid}", {"image_cid": image_cid, "metadata_cid": meta_cid}
-    # site: copy the PNG and write the JSON where the static site serves them
+    # site: the PNG and the JSON go where the static site serves them; /nft/<id> rewrites to /nft/<id>.json
     SITE_NFT.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(png_path, SITE_NFT / piece["png"])
     image_uri = f"{SITE_URL}/nft/{piece['png']}"
     meta = metadata_for(piece, image_uri)
-    (SITE_NFT / f"{piece['id']}.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
-    return image_uri, f"{SITE_URL}/nft/{piece['id']}.json", {"metadata_file": f"site/nft/{piece['id']}.json"}
+    (SITE_NFT / f"{token_id}.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
+    return image_uri, f"{SITE_URL}/nft/{token_id}", {"metadata_file": f"site/nft/{token_id}.json"}
 
 
 def mint_piece(piece_id: int, dry_run: bool = True, network: str | None = None) -> dict:
@@ -151,23 +157,29 @@ def mint_piece(piece_id: int, dry_run: bool = True, network: str | None = None) 
         meta = metadata_for(piece, f"{SITE_URL}/nft/{piece['png']}" if mode == "site" else "ipfs://<cid-of-png>")
         return {"dry_run": True, "network": network, "metadata_mode": mode,
                 "contract": contract_addr or "<CANVAS_CONTRACT unset>",
-                "to": os.environ.get("CANVAS_OWNER") or "<painter wallet>", "png": str(png_path), "metadata": meta}
+                "to": os.environ.get("CANVAS_MINT_TO") or "<painter wallet>", "png": str(png_path), "metadata": meta}
 
     if not contract_addr:
         raise SystemExit("CANVAS_CONTRACT is not set")
 
     from .keystore import load_account
     acct = load_account()
-    to = Web3.to_checksum_address(os.environ.get("CANVAS_OWNER") or acct.address)
-
-    image_uri, meta_uri, extra = publish_metadata(piece, png_path, mode)
+    # tokens go to the painter by default so the studio can list them itself; CANVAS_OWNER overrides
+    to = Web3.to_checksum_address(os.environ.get("CANVAS_MINT_TO") or acct.address)
 
     w3 = Web3(Web3.HTTPProvider(net["rpc"], request_kwargs={"timeout": 60}))
     if w3.eth.chain_id != net["chain_id"]:
         raise SystemExit(f"rpc is chain {w3.eth.chain_id}, expected {net['chain_id']}")
     contract = w3.eth.contract(address=Web3.to_checksum_address(contract_addr), abi=ABI)
+    next_id = int(contract.functions.nextId().call())
+    max_supply = int(contract.functions.maxSupply().call())
+    if next_id > max_supply:
+        raise SystemExit(f"sold out: {max_supply} tokens minted")
+    # metadata is written under the id the contract will assign (ids are sequential, one minter)
+    image_uri, meta_uri, extra = publish_metadata(piece, png_path, mode, next_id)
+
     png_sha = bytes.fromhex(piece["png_sha256"])
-    fn = contract.functions.mint(to, meta_uri, png_sha, int(piece["seed"]) & ((1 << 64) - 1))
+    fn = contract.functions.mint(to, png_sha, int(piece["seed"]) & ((1 << 64) - 1))
     tx_params = {"from": acct.address, "nonce": w3.eth.get_transaction_count(acct.address), "chainId": net["chain_id"]}
     if net["legacy_gas"]:
         tx_params["gasPrice"] = int(w3.eth.gas_price * 1.2)
@@ -185,6 +197,9 @@ def mint_piece(piece_id: int, dry_run: bool = True, network: str | None = None) 
     token_id = None
     for log in contract.events.Transfer().process_receipt(receipt):
         token_id = int(log["args"]["tokenId"])
+    if token_id is not None and token_id != next_id and mode == "site":
+        # someone else minted in between (the keeper by hand): move the metadata to the real id
+        image_uri, meta_uri, extra = publish_metadata(piece, png_path, mode, token_id)
     result = {
         "network": network,
         "contract": Web3.to_checksum_address(contract_addr),

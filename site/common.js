@@ -43,15 +43,25 @@
     },
     async resolveBase() {
       if (CC._base !== undefined) return CC._base;
-      try { const r = await CC.fetchT("api/info", 3500); if (r.ok) { const j = await r.json(); if (j && j.neurons) return (CC._base = ""); } } catch (e) {}
-      try {
-        const l = await (await CC.fetchT("live.json", 3000)).json();
-        if (l && l.studio) {
-          const base = String(l.studio).replace(/\/$/, "");
-          const r = await CC.fetchT(base + "/api/info", 7000);
-          if (r.ok) return (CC._base = base);
-        }
-      } catch (e) {}
+      const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      const sameOrigin = async () => {
+        try { const r = await CC.fetchT("api/info", local ? 4000 : 2500); if (r.ok) { const j = await r.json(); if (j && j.neurons) return ""; } } catch (e) {}
+        return null;
+      };
+      const viaLive = async () => {
+        try {
+          const l = await (await CC.fetchT("live.json", 3000)).json();
+          if (l && l.studio) {
+            const base = String(l.studio).replace(/\/$/, "");
+            const r = await CC.fetchT(base + "/api/info", 8000);
+            if (r.ok) return base;
+          }
+        } catch (e) {}
+        return null;
+      };
+      // on the public site the tunnel address is the likely answer, so ask for it first
+      const order = local ? [sameOrigin, viaLive] : [viaLive, sameOrigin];
+      for (const probe of order) { const b = await probe(); if (b !== null) return (CC._base = b); }
       return (CC._base = null);
     },
     U(p) { return CC._base ? CC._base + "/" + p : p; },

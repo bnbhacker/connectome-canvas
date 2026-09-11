@@ -50,6 +50,8 @@ class Studio:
         self.max_sittings = max_sittings          # 0 = paint forever; N = paint N sittings, then rest
         self.done = 0
         self.resting = False
+        self.sold_out = False
+        self._chain_lock = threading.Lock()       # mint → publish → list, one piece at a time, in order
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self._run, name="studio", daemon=True)
         self.next_sitting_at: float | None = None
@@ -60,10 +62,14 @@ class Studio:
 
     def _run(self) -> None:
         p = self.painter
+        # the cap counts every sitting ever painted, not just this process's
+        already = len(p._read_index())
         while not self.stop.is_set():
-            if self.max_sittings and self.done >= self.max_sittings:
+            painted = already + self.done
+            if (self.max_sittings and painted >= self.max_sittings) or self.sold_out:
                 self.resting = True
-                p.event("rest", f"the studio is resting after {self.done} sitting(s); restart with a higher --sittings to paint more")
+                why = "the collection is sold out" if self.sold_out else f"{painted} sittings painted, the cap is {self.max_sittings}"
+                p.event("rest", f"the fly has put the brush down: {why}")
                 self.stop.wait()
                 break
             p.new_session()
@@ -73,15 +79,23 @@ class Studio:
                 break
             self.done += 1
             piece = p.finished[-1] if p.finished else None
-            if piece and self.mint:
-                threading.Thread(target=self._mint, args=(piece["id"],), daemon=True).start()
-            if piece and os.environ.get("CANVAS_AUTOPUBLISH", "0") == "1":
-                threading.Thread(target=self._publish, args=(piece["id"],), daemon=True).start()
-            if self.max_sittings and self.done >= self.max_sittings:
+            if piece:
+                threading.Thread(target=self._after_sitting, args=(piece["id"],), daemon=True).start()
+            if self.max_sittings and already + self.done >= self.max_sittings:
                 continue
             self.next_sitting_at = time.time() + self.pause_s
             self.stop.wait(self.pause_s)
             self.next_sitting_at = None
+
+    def _after_sitting(self, piece_id: int) -> None:
+        """mint → publish → list, serialised so ids, files and nonces never race."""
+        with self._chain_lock:
+            if self.mint:
+                self._mint(piece_id)
+            if os.environ.get("CANVAS_AUTOPUBLISH", "0") == "1":
+                self._publish(piece_id)
+            if self.mint and self.list_eth:
+                self._list_backlog()
 
     def _publish(self, what) -> None:
         """Push site/ (scores, thumbnails, gallery index, live.json) to Vercel so the public site stays current."""
@@ -106,13 +120,36 @@ class Studio:
             self.painter.event("mint", f"minting #{piece_id} …")
             result = mint_piece(piece_id, dry_run=False)
             self.painter.event("mint", f"minted #{piece_id} as token {result['token_id']} · {result['tx'][:12]}…")
-            if self.list_eth:
-                from chain.opensea import list_piece
-                self.painter.event("list", f"listing token {result['token_id']} at {self.list_eth} ETH …")
-                listing = list_piece(piece_id, self.list_eth)
-                self.painter.event("list", f"listed · {listing.get('url', '')}")
+        except SystemExit as e:
+            msg = str(e)
+            if "sold out" in msg:
+                self.sold_out = True
+            self.painter.event("error", f"mint failed for #{piece_id}: {msg}")
         except Exception as e:  # the studio keeps painting whatever happens on chain
-            self.painter.event("error", f"chain step failed for #{piece_id}: {type(e).__name__}: {e}")
+            self.painter.event("error", f"mint failed for #{piece_id}: {type(e).__name__}: {e}")
+
+    def _list_backlog(self, max_per_pass: int = 3) -> None:
+        """List every minted-but-unlisted piece, oldest first, a few per pass; failures are retried next time."""
+        import json as _json
+        from chain.opensea import list_piece
+        index = self.painter._read_index()
+        todo = [p for p in index if (p.get("chain") or {}).get("token_id") is not None
+                and not (p.get("chain") or {}).get("listing") and (p.get("chain") or {}).get("list_attempts", 0) < 8]
+        for p in todo[:max_per_pass]:
+            try:
+                self.painter.event("list", f"listing #{p['id']} (token {p['chain']['token_id']}) at {self.list_eth} ETH …")
+                listing = list_piece(p["id"], self.list_eth)
+                self.painter.event("list", f"listed #{p['id']} · {listing.get('url', '')}")
+            except BaseException as e:  # SystemExit included: OpenSea may not have indexed the token yet
+                gp = GALLERY / f"canvas-{p['id']:04d}.json"
+                try:
+                    piece = _json.loads(gp.read_text(encoding="utf-8"))
+                    piece.setdefault("chain", {})["list_attempts"] = piece["chain"].get("list_attempts", 0) + 1
+                    from chain.mint import save_piece
+                    save_piece(gp, piece)
+                except Exception:
+                    pass
+                self.painter.event("error", f"listing #{p['id']} failed (will retry): {str(e)[:160]}")
 
 
 class Tunnel:
@@ -173,7 +210,7 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
     studio = Studio(painter, pause_s=float(os.environ.get("CANVAS_PAUSE_S", 20)),
                     mint=os.environ.get("CANVAS_MINT", "0") == "1",
                     list_eth=os.environ.get("CANVAS_LIST_ETH") or None,
-                    max_sittings=_env_int("CANVAS_SITTINGS", 0))
+                    max_sittings=_env_int("CANVAS_SITTINGS", 0) or _env_int("CANVAS_MAX_SUPPLY", 5000))
 
     app = FastAPI(title="Canvas Fly", docs_url=None, redoc_url=None)
     app.state.painter = painter
@@ -224,8 +261,10 @@ def build_app(graph_path: Path | None = None) -> FastAPI:
         d["next_sitting_in_s"] = None if studio.next_sitting_at is None else max(0, round(studio.next_sitting_at - time.time()))
         d["mint_enabled"] = studio.mint
         d["resting"] = studio.resting
+        d["sold_out"] = studio.sold_out
         d["sittings_done"] = studio.done
         d["sittings_max"] = studio.max_sittings
+        d["list_eth"] = studio.list_eth
         d["now"] = time.time()
         return JSONResponse(d, headers={"Cache-Control": "no-store"})
 
