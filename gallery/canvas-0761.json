@@ -1,0 +1,132 @@
+{
+ "id": 761,
+ "name": "Canvas Fly #761",
+ "seed": 2659945711,
+ "finished_at": 1789149176.1101193,
+ "wall_seconds": 35.5,
+ "brain_ms": 6000.0,
+ "ticks": 600,
+ "strokes": 26,
+ "lifts": 26,
+ "reversals": 3,
+ "bumps": 6,
+ "path_px": 4988.4,
+ "spikes": 3595667,
+ "mean_rate_hz": 3.629,
+ "gain_final": 0.7481,
+ "gain_mean": 0.7486,
+ "synapses_changed": 1019,
+ "rewards": 368190,
+ "punishments": 5087,
+ "coverage": 0.172447,
+ "fitness": 0.212447,
+ "hues_used": 12,
+ "generation": 707,
+ "gains_sha256": "d0227caeec8512e8426050be94e749bb6490ac83a9a44a57dcf6c62421bb4d06",
+ "mutation_kept": false,
+ "style": {
+  "turn_gain": 0.06,
+  "inertia": 0.0,
+  "step_gain": 31.0527,
+  "width_gain": 34.7411,
+  "lift_hz": 28.7752,
+  "mirror": 0.9744,
+  "hue_offset": 0.7165,
+  "hue_spread": 1.0587,
+  "sat_base": 0.5652,
+  "paper_hue": 0.7531,
+  "paper_sat": 0.3538,
+  "paper_light": 0.16
+ },
+ "mirror": true,
+ "paper": [
+  41,
+  26,
+  55
+ ],
+ "top_types": [
+  {
+   "type": "L2",
+   "spikes": 352
+  },
+  {
+   "type": "L5",
+   "spikes": 321
+  },
+  {
+   "type": "C3",
+   "spikes": 309
+  },
+  {
+   "type": "R1-R6",
+   "spikes": 238
+  },
+  {
+   "type": "C2",
+   "spikes": 205
+  },
+  {
+   "type": "Tm3",
+   "spikes": 87
+  },
+  {
+   "type": "Mi1",
+   "spikes": 87
+  },
+  {
+   "type": "L4",
+   "spikes": 83
+  }
+ ],
+ "swatches": [
+  "#4c57c6",
+  "#4f72c7",
+  "#c654bb",
+  "#4e61c5",
+  "#5389c6",
+  "#5168c6",
+  "#4c66c4",
+  "#4f9bc5",
+  "#4f72c5",
+  "#4d84c4",
+  "#4fadc5",
+  "#4f94c5"
+ ],
+ "png": "canvas-0761.png",
+ "png_sha256": "66ed05cdf3175b7470f5236375b57307790449537441e3a65b343da4ed142d6c",
+ "recording": "recordings/canvas-0761.json",
+ "dataset": "FlyEM male CNS connectome v1.0 (minconf 0.5, traced only)",
+ "surrogate": false,
+ "graph_sha256": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8",
+ "neurons": 165122,
+ "edges": 10228000,
+ "chain": {
+  "network": "robinhood",
+  "contract": "0xa494Fe452526cEf4442c2A5927B3D7749841a611",
+  "token_id": 761,
+  "tx": "447ebd7ea8abf3284561eae2773c1ec88fefd2c74dde53a2725627e280287734",
+  "block": 60490445,
+  "owner": "0x2d20fc653dE3Cc10818381312402E46bA6f6b248",
+  "metadata_mode": "site",
+  "image": "https://connectomecanvas.com/nft/canvas-0761.png",
+  "metadata": "https://connectomecanvas.com/nft/761",
+  "metadata_file": "site/nft/761.json",
+  "explorer": "https://robinhoodchain.blockscout.com/tx/447ebd7ea8abf3284561eae2773c1ec88fefd2c74dde53a2725627e280287734",
+  "opensea": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/761",
+  "minted_at": 1789153522.14667,
+  "listing": {
+   "price": "2.5",
+   "price_eth": null,
+   "currency": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+   "currency_symbol": "USDG",
+   "days": 30,
+   "order_hash": "0x6c7748240e4de035872f58a468e407031508d7954428de5e1ec0153082077def",
+   "slug": "canvas-fly-362954926",
+   "approval_tx": null,
+   "listed_at": 1789160532.6777267,
+   "expires": 1791752520,
+   "url": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/761"
+  }
+ },
+ "thumb": "canvas-0761.jpg"
+}

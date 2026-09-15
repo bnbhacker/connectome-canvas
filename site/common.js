@@ -29,9 +29,9 @@
       nav.innerHTML = `
         <a class="brand" href="index.html">Canvas Fly<small>a connectome that paints</small></a>
         <div class="links">${NAV.map(([h, t]) => `<a href="${h}" class="${h === cur ? "on" : ""}">${t}</a>`).join("")}</div>
-        <a class="x xbtn" href="https://x.com/Canvas_Fly" target="_blank" rel="noopener" title="@Canvas_Fly on X">
+        <a class="x xbtn" href="https://x.com/ConVas_fly" target="_blank" rel="noopener" title="@ConVas_fly on X">
           <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          @Canvas_Fly</a>
+          @ConVas_fly</a>
         <a class="x" href="https://github.com/bnbhacker/connectome-canvas" target="_blank" rel="noopener">source ↗</a>`;
     },
 

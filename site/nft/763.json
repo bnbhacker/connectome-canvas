@@ -1,0 +1,84 @@
+{
+ "name": "Canvas Fly #763",
+ "description": "Painted by a real fruit-fly nervous system: 165,122 traced neurons of the male Drosophila CNS connectome (Janelia FlyEM, Cambridge Connectomics, Google Research, CC-BY 4.0), simulated as leaky integrate-and-fire units. The retina looked at the canvas, the descending neurons moved the brush, population activity chose the colour. 6.0 s of brain time, 18 strokes, 3,064,921 spikes. Seed 2217890136 \u2014 replayable to the pixel with the same graph. Nobody drew this. Watch it being painted: https://connectomecanvas.com/demo#763",
+ "image": "https://connectomecanvas.com/nft/canvas-0763.png",
+ "external_url": "https://connectomecanvas.com/demo#763",
+ "attributes": [
+  {
+   "trait_type": "Sitting",
+   "display_type": "number",
+   "value": 763
+  },
+  {
+   "trait_type": "Generation",
+   "display_type": "number",
+   "value": 709
+  },
+  {
+   "trait_type": "Canvas covered (%)",
+   "value": 19.59
+  },
+  {
+   "trait_type": "Symmetry",
+   "value": "bilateral"
+  },
+  {
+   "trait_type": "Hues used (of 12)",
+   "display_type": "number",
+   "value": 12
+  },
+  {
+   "trait_type": "Wheel origin (\u00b0)",
+   "display_type": "number",
+   "value": 284
+  },
+  {
+   "trait_type": "Seed",
+   "value": "2217890136"
+  },
+  {
+   "trait_type": "Brain time (s)",
+   "value": 6.0
+  },
+  {
+   "trait_type": "Strokes",
+   "value": 18
+  },
+  {
+   "trait_type": "Spikes",
+   "value": 3064921
+  },
+  {
+   "trait_type": "Brush lifts (DNp09)",
+   "value": 18
+  },
+  {
+   "trait_type": "Reversals (MDN)",
+   "value": 1
+  },
+  {
+   "trait_type": "Synapses changed",
+   "value": 1019
+  },
+  {
+   "trait_type": "Neurons",
+   "value": 165122
+  },
+  {
+   "trait_type": "Palette",
+   "value": "#b4a10d, #983334, #92315c, #913167, #953260, #8b2f69"
+  },
+  {
+   "trait_type": "Dataset",
+   "value": "FlyEM male CNS connectome v1.0 (minconf 0.5, traced only)"
+  },
+  {
+   "trait_type": "Graph sha256",
+   "value": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8"
+  },
+  {
+   "trait_type": "PNG sha256",
+   "value": "8f55bf87e6c3bbea227fc067d81d90d68ae24bd7d03ba69dbd2ce565ba743cfd"
+  }
+ ]
+}

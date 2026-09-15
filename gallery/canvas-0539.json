@@ -78,6 +78,33 @@
  "graph_sha256": "6ba25e70b1e5f8c9824767147edd4909ce89031ae8c8328d36c3310a2abeb5a8",
  "neurons": 165122,
  "edges": 10228000,
- "chain": null,
+ "chain": {
+  "network": "robinhood",
+  "contract": "0xa494Fe452526cEf4442c2A5927B3D7749841a611",
+  "token_id": 539,
+  "tx": "088227db2154ce5363c7d085a0d5e2ee15a274cd09f38258a5bb7f4d42ddcb29",
+  "block": 60352206,
+  "owner": "0x2d20fc653dE3Cc10818381312402E46bA6f6b248",
+  "metadata_mode": "site",
+  "image": "https://connectomecanvas.com/nft/canvas-0539.png",
+  "metadata": "https://connectomecanvas.com/nft/539",
+  "metadata_file": "site/nft/539.json",
+  "explorer": "https://robinhoodchain.blockscout.com/tx/088227db2154ce5363c7d085a0d5e2ee15a274cd09f38258a5bb7f4d42ddcb29",
+  "opensea": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/539",
+  "minted_at": 1789139455.0739176,
+  "listing": {
+   "price": "2.5",
+   "price_eth": null,
+   "currency": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+   "currency_symbol": "USDG",
+   "days": 30,
+   "order_hash": "0x0abaf7e75ebd3038918ce62dcf540b3c02b8d322035dc3d8959fa91e52eb73c7",
+   "slug": "canvas-fly-362954926",
+   "approval_tx": null,
+   "listed_at": 1789145087.9368033,
+   "expires": 1791737087,
+   "url": "https://opensea.io/assets/robinhood/0xa494Fe452526cEf4442c2A5927B3D7749841a611/539"
+  }
+ },
  "thumb": "canvas-0539.jpg"
 }
